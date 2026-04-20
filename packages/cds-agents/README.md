@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/SAP/cloud-cap-samples/main/assets/cap-logo.png" width="120" alt="SAP CAP Logo" />
+  <img src="./assets/logo.svg" width="120" alt="cds-agents Logo" />
   <h1>cds-agents</h1>
   <p><strong>AI tool generation for SAP CAP</strong></p>
   <p><em>Auto-generates LangChain tools from your CDS service definitions — so an LLM can talk to your CAP backend.</em></p>
