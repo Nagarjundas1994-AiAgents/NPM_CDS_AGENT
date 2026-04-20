@@ -22,15 +22,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install pnpm
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: .
+        run: pnpm install
+        working-directory: ${{ github.workspace }}
 
       - name: Build
         run: pnpm build
