@@ -1,0 +1,19 @@
+{
+  "name": "cds-agents-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Demo university app powered by cds-agents",
+  "scripts": {
+    "start": "cds-serve",
+    "dev": "cds watch",
+    "chat": "node chat.mjs"
+  },
+  "dependencies": {
+    "@sap/cds": "^8",
+    "express": "^4",
+    "@cap-js/sqlite": "^1"
+  },
+  "devDependencies": {
+    "cds-agents": "workspace:*"
+  }
+}

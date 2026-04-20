@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Package artifacts
+*.tgz
+
+# Test coverage
+coverage/
+
+# CDS build output
+gen/
+default-*.db
+*.sqlite
