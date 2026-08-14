@@ -1,13 +1,37 @@
 {
-  "name": "cds-agent-libs",
-  "version": "1.0.0",
+  "name": "cds-agents-monorepo",
+  "version": "1.1.0",
   "private": true,
-  "description": "Monorepo for cds-agents — AI agent integration for SAP CAP",
+  "description": "Monorepo for cds-agents — the SAP CAP-native tool layer for agentic applications",
+  "homepage": "https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT#readme",
+  "bugs": {
+    "url": "https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT.git"
+  },
   "scripts": {
     "test": "pnpm -r test",
     "build": "pnpm -r build",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm --filter cds-agents lint",
+    "pack:check": "pnpm --filter cds-agents exec npm pack --dry-run"
   },
-  "keywords": ["sap", "cap", "cds", "ai", "agents", "langchain"],
-  "license": "MIT"
+  "keywords": [
+    "sap",
+    "cap",
+    "cds",
+    "sap-cap",
+    "agent",
+    "langchain",
+    "langgraph",
+    "mcp",
+    "odata"
+  ],
+  "license": "MIT",
+  "author": "Nagarjun Das",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "pnpm@9.15.0"
 }

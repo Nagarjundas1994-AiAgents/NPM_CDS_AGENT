@@ -179,4 +179,90 @@ describe('generateAllTools', () => {
     expect(names).toContain('read_Students');
     expect(names).toContain('read_Courses');
   });
+
+  it('toolStrategy: minimal exposes describe + query only', () => {
+    const tools = generateAllTools(entities, unboundActions, executor, 'StudentService', {
+      toolStrategy: 'minimal',
+    });
+    expect(tools.map((t) => t.name)).toEqual(['describe', 'query']);
+  });
+
+  it('toolStrategy: crud omits actions', () => {
+    const tools = generateAllTools(entities, unboundActions, executor, 'StudentService', {
+      toolStrategy: 'crud',
+    });
+    const names = tools.map((t) => t.name);
+    expect(names).toContain('read_Students');
+    expect(names).not.toContain('action_enrollStudent');
+    expect(names).not.toContain('action_Courses_archive');
+  });
+
+  it('toolStrategy: actions omits CRUD', () => {
+    const tools = generateAllTools(entities, unboundActions, executor, 'StudentService', {
+      toolStrategy: 'actions',
+    });
+    const names = tools.map((t) => t.name);
+    expect(names).not.toContain('read_Students');
+    expect(names).toContain('action_enrollStudent');
+    expect(names).toContain('action_Courses_archive');
+  });
+
+  it('allowDelete: false removes delete tools', () => {
+    const tools = generateAllTools(entities, unboundActions, executor, 'StudentService', {
+      allowDelete: false,
+    });
+    const names = tools.map((t) => t.name);
+    expect(names).not.toContain('delete_Students');
+    expect(names).toContain('update_Students');
+  });
+
+  it('@readonly entities get read tools only', () => {
+    const tools = generateAllTools(
+      { Reports: { ...studentsEntity, '@readonly': true } },
+      {},
+      executor,
+      'StudentService'
+    );
+
+    expect(tools.map((t) => t.name)).toEqual(['read_Reports']);
+  });
+
+  it('minimal query refuses entities the policy hides', async () => {
+    const tools = generateAllTools(
+      { Reports: { ...studentsEntity, '@insertonly': true } },
+      {},
+      executor,
+      'StudentService',
+      { toolStrategy: 'minimal' }
+    );
+    const query = tools.find((t) => t.name === 'query')!;
+
+    const result = await query.invoke({ entity: 'Reports' });
+    expect(result).toContain('non-readable');
+  });
+
+  it('query tool converts a structured filter to OData', async () => {
+    const tools = generateAllTools(entities, unboundActions, executor, 'StudentService', {
+      toolStrategy: 'minimal',
+    });
+    const query = tools.find((t) => t.name === 'query')!;
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ value: [{ firstName: 'Alice' }] }),
+    });
+
+    const result = await query.invoke({
+      entity: 'Students',
+      filter: { gpa: { lt: 2 } },
+      top: 5,
+    });
+
+    expect(result).toContain('Alice');
+    const url = mockFetch.mock.calls[mockFetch.mock.calls.length - 1][0] as string;
+    expect(url).toContain('Students?');
+    expect(url).toContain('%24filter=gpa+lt+2');
+    expect(url).toContain('%24top=5');
+  });
 });

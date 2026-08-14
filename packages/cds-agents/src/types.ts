@@ -82,9 +82,49 @@ export type AuthConfig =
   | { type: 'none' };
 
 /**
+ * How capabilities are exposed as tools.
+ *
+ * - `minimal` — `describe` + `query` only (token-efficient; recommended for large models)
+ * - `crud`    — per-entity read/create/update/delete (no actions)
+ * - `actions` — bound and unbound actions/functions only
+ * - `full`    — CRUD + actions (default, backward compatible)
+ */
+export type ToolStrategy = 'minimal' | 'crud' | 'actions' | 'full';
+
+/**
+ * Operation-level policy for generated capabilities.
+ *
+ * These are the *requested* permissions. The effective permissions are the
+ * intersection of this policy with the CDS model's own annotations
+ * (`@readonly`, `@insertonly`, `@Capabilities.*`) — the model always wins.
+ */
+export interface ToolPolicy {
+  /** Allow create tools. @default true */
+  allowCreate?: boolean;
+  /** Allow update tools. @default true */
+  allowUpdate?: boolean;
+  /** Allow delete tools. @default true */
+  allowDelete?: boolean;
+}
+
+/** Effective per-entity permissions after CDS annotations and `ToolPolicy`. */
+export interface EntityPolicy {
+  read: boolean;
+  create: boolean;
+  update: boolean;
+  delete: boolean;
+}
+
+/**
+ * Entity name → effective permissions, enforced by {@link ODataExecutor} at
+ * request time. Entities absent from the map are denied.
+ */
+export type OperationPolicyMap = Record<string, EntityPolicy>;
+
+/**
  * Configuration for the CAPAgent and CAPToolkit classes.
  */
-export interface CAPAgentConfig {
+export interface CAPAgentConfig extends ToolPolicy {
   /** The CDS service name to target (e.g. 'StudentService'). */
   service: string;
 
@@ -109,6 +149,13 @@ export interface CAPAgentConfig {
   /** Entities to exclude from tool generation. Applied after `tools`. */
   exclude?: string[];
 
+  /**
+   * Tool surface exposed to the model.
+   * Use `minimal` for large CAP services to avoid hundreds of CRUD tools.
+   * @default 'full'
+   */
+  toolStrategy?: ToolStrategy;
+
   /** Authentication for the CAP service. Defaults to { type: 'none' }. */
   auth?: AuthConfig;
 
@@ -120,6 +167,9 @@ export interface CAPAgentConfig {
 
   /** If true, logs OData calls instead of executing them. */
   dryRun?: boolean;
+
+  /** HTTP timeout in milliseconds for OData calls. @default 30000 */
+  timeoutMs?: number;
 
   /** Custom system prompt for the ReAct agent. */
   systemPrompt?: string;

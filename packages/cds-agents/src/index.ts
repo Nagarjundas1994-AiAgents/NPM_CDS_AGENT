@@ -20,10 +20,19 @@ export {
   generateEntityTools,
   generateUnboundActionTools,
   generateBoundActionTools,
+  generateMinimalTools,
   generateAllTools,
 } from './tool-generator';
 
 export { loadCDSModel, getEntityKeys, describeEntityFields } from './model-loader';
+
+export {
+  buildCapabilityMap,
+  resolveEntityNames,
+  resolveEntityPolicy,
+  toOperationPolicy,
+} from './capability';
+export { toODataFilter, toODataQueryParams, formatODataLiteral } from './query-builder';
 
 // ─── Type Exports ───────────────────────────────────────────────────────────
 
@@ -38,4 +47,24 @@ export type {
   GeneratedToolMeta,
   LoadedCDSService,
   AgentStreamEvent,
+  ToolStrategy,
+  ToolPolicy,
+  EntityPolicy,
+  OperationPolicyMap,
 } from './types';
+
+export type {
+  ServiceCapabilityMap,
+  EntityCapability,
+  ActionCapability,
+  CapabilityOperation,
+} from './capability';
+
+export type {
+  QueryFilter,
+  StructuredQuery,
+  ComparisonOp,
+  FieldFilter,
+} from './query-builder';
+
+export type { ODataErrorObject } from './odata-executor';

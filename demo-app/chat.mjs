@@ -7,6 +7,11 @@
  * Then in another terminal:
  *   node chat.mjs
  *
+ * Optional env:
+ *   TOOL_STRATEGY=minimal|crud|actions|full   (default: full)
+ *   ALLOW_DELETE=false
+ *   DRY_RUN=true
+ *
  * Example prompts:
  *   "List all students with GPA below 2.0"
  *   "Create a new course called Machine Learning with code ML101, 4 credits, CS department"
@@ -31,6 +36,8 @@ const agent = new CAPAgent({
   baseUrl: process.env.CAP_URL || 'http://localhost:4004',
   model,
   tools: 'auto',
+  toolStrategy: process.env.TOOL_STRATEGY || 'full',
+  allowDelete: process.env.ALLOW_DELETE !== 'false',
   auth: { type: 'none' },
   dryRun: process.env.DRY_RUN === 'true',
 });
@@ -50,6 +57,17 @@ console.log('║  Ask me anything about students, courses,        ║');
 console.log('║  enrollments — or run service actions!            ║');
 console.log('║  Type "exit" to quit.                            ║');
 console.log('╚══════════════════════════════════════════════════╝');
+console.log('');
+
+// Show what this agent is actually allowed to do before taking any input.
+const capabilities = await agent.getCapabilityMap();
+console.log(`Governed capabilities (strategy: ${capabilities.strategy}):`);
+for (const entity of capabilities.entities) {
+  console.log(`  ${entity.name.padEnd(14)} ${entity.operations.join(', ') || '— no CRUD —'}`);
+}
+if (capabilities.unbound.length) {
+  console.log(`  actions        ${capabilities.unbound.map((a) => a.name).join(', ')}`);
+}
 console.log('');
 
 async function prompt() {

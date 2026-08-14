@@ -3,6 +3,8 @@ import type { CAPAgentConfig } from './types';
 import { loadCDSModel } from './model-loader';
 import { ODataExecutor } from './odata-executor';
 import { generateAllTools } from './tool-generator';
+import { buildCapabilityMap, resolveEntityNames, toOperationPolicy } from './capability';
+import type { ServiceCapabilityMap } from './capability';
 
 /**
  * CAPToolkit — Generates LangChain tools from a CDS service without creating a full agent.
@@ -36,12 +38,15 @@ import { generateAllTools } from './tool-generator';
 export class CAPToolkit {
   private readonly config: Omit<CAPAgentConfig, 'model'>;
   private tools: StructuredToolInterface[] | null = null;
+  private capabilityMap: ServiceCapabilityMap | null = null;
+  private executor: ODataExecutor | null = null;
 
   constructor(config: Omit<CAPAgentConfig, 'model'>) {
     this.config = {
       tools: 'auto',
       auth: { type: 'none' },
       dryRun: false,
+      toolStrategy: 'full',
       ...config,
     };
   }
@@ -63,24 +68,81 @@ export class CAPToolkit {
       serviceName: this.config.service,
     });
 
-    // Create the OData executor
-    const executor = new ODataExecutor({
+    this.capabilityMap = this.toCapabilityMap(loaded);
+
+    // Create the OData executor, governed by the same capability map the
+    // tools are generated from — advertised and permitted cannot drift.
+    const executor = (this.executor = new ODataExecutor({
       baseUrl: this.config.baseUrl,
       servicePath: loaded.serviceName,
       auth: this.config.auth,
       dryRun: this.config.dryRun,
-    });
+      timeoutMs: this.config.timeoutMs,
+      policy: toOperationPolicy(this.capabilityMap),
+    }));
 
-    // Generate all tools
     this.tools = generateAllTools(
       loaded.entities,
       loaded.unboundActions,
       executor,
       loaded.serviceName,
-      { tools: this.config.tools, exclude: this.config.exclude }
+      {
+        tools: this.config.tools,
+        exclude: this.config.exclude,
+        toolStrategy: this.config.toolStrategy,
+        allowCreate: this.config.allowCreate,
+        allowUpdate: this.config.allowUpdate,
+        allowDelete: this.config.allowDelete,
+      }
     );
 
     return [...this.tools];
+  }
+
+  /**
+   * Returns the protocol-agnostic capability map for this service.
+   * Useful for inspect UIs, MCP adapters, and policy reviews.
+   */
+  async getCapabilityMap(): Promise<ServiceCapabilityMap> {
+    if (this.capabilityMap) return this.capabilityMap;
+
+    const loaded = await loadCDSModel({
+      cdsFile: this.config.cdsFile,
+      cdsModel: this.config.cdsModel,
+      serviceName: this.config.service,
+    });
+
+    this.capabilityMap = this.toCapabilityMap(loaded);
+    return this.capabilityMap;
+  }
+
+  private toCapabilityMap(
+    loaded: Awaited<ReturnType<typeof loadCDSModel>>
+  ): ServiceCapabilityMap {
+    return buildCapabilityMap({
+      serviceName: loaded.serviceName,
+      entities: loaded.entities,
+      unboundActions: loaded.unboundActions,
+      entityNames: resolveEntityNames(
+        loaded.entities,
+        this.config.tools,
+        this.config.exclude
+      ),
+      toolStrategy: this.config.toolStrategy,
+      allowCreate: this.config.allowCreate,
+      allowUpdate: this.config.allowUpdate,
+      allowDelete: this.config.allowDelete,
+    });
+  }
+
+  /**
+   * Returns the OData executor the generated tools use — the same instance, so
+   * direct calls are subject to the same policy. Use it for CAP calls you want
+   * governed but not exposed to the model.
+   */
+  async getExecutor(): Promise<ODataExecutor> {
+    await this.getTools();
+    return this.executor!;
   }
 
   /**

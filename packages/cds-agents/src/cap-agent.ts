@@ -1,9 +1,8 @@
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import type { CAPAgentConfig, AgentStreamEvent } from './types';
-import { loadCDSModel } from './model-loader';
-import { ODataExecutor } from './odata-executor';
-import { generateAllTools } from './tool-generator';
+import { CAPToolkit } from './cap-toolkit';
+import type { ServiceCapabilityMap } from './capability';
 
 /**
  * CAPAgent — The main entry point for AI-powered interaction with SAP CAP services.
@@ -30,6 +29,7 @@ import { generateAllTools } from './tool-generator';
  */
 export class CAPAgent {
   private readonly config: CAPAgentConfig;
+  private readonly toolkit: CAPToolkit;
   private agent: ReturnType<typeof createReactAgent> | null = null;
   private tools: StructuredToolInterface[] = [];
   private initialized = false;
@@ -40,48 +40,31 @@ export class CAPAgent {
       auth: { type: 'none' },
       dryRun: false,
       temperature: 0,
+      toolStrategy: 'full',
       ...config,
     };
+    this.toolkit = new CAPToolkit(this.config);
   }
 
   /**
-   * Lazy initialization — loads the CDS model, generates tools, and creates the agent.
+   * Lazy initialization — generates tools via CAPToolkit and creates the agent.
    * Called automatically on the first invoke() or stream() call.
    */
   private async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    // 1. Load and introspect the CDS model
-    const loaded = await loadCDSModel({
-      cdsFile: this.config.cdsFile,
-      cdsModel: this.config.cdsModel,
-      serviceName: this.config.service,
-    });
+    // 1. Tools + capability map (policy-enforced by the toolkit's executor)
+    this.tools = await this.toolkit.getTools();
+    const capabilities = await this.toolkit.getCapabilityMap();
 
-    // 2. Create the OData executor
-    const executor = new ODataExecutor({
-      baseUrl: this.config.baseUrl,
-      servicePath: loaded.serviceName,
-      auth: this.config.auth,
-      dryRun: this.config.dryRun,
-    });
-
-    // 3. Generate tools
-    this.tools = generateAllTools(
-      loaded.entities,
-      loaded.unboundActions,
-      executor,
-      loaded.serviceName,
-      { tools: this.config.tools, exclude: this.config.exclude }
-    );
-
-    // 4. Resolve the LLM
+    // 2. Resolve the LLM
     const llm = await this.resolveLLM();
 
-    // 5. Build the system prompt
-    const systemPrompt = this.config.systemPrompt || this.buildDefaultSystemPrompt(loaded);
+    // 3. Build the system prompt
+    const systemPrompt =
+      this.config.systemPrompt || this.buildDefaultSystemPrompt(capabilities);
 
-    // 6. Create the ReAct agent
+    // 4. Create the ReAct agent
     this.agent = createReactAgent({
       llm,
       tools: this.tools,
@@ -147,22 +130,33 @@ export class CAPAgent {
   /**
    * Builds the default system prompt for the ReAct agent.
    */
-  private buildDefaultSystemPrompt(loaded: Awaited<ReturnType<typeof loadCDSModel>>): string {
-    const entityList = Object.keys(loaded.entities).join(', ');
-    const actionList = Object.keys(loaded.unboundActions).join(', ') || '(none)';
+  private buildDefaultSystemPrompt(capabilities: ServiceCapabilityMap): string {
+    // Built from the capability map, so the prompt only ever names entities and
+    // actions the agent was actually given tools for.
+    const entityList = capabilities.entities
+      .map((e) => `${e.name} (${e.operations.join('/') || 'actions only'})`)
+      .join(', ');
+    const actionList = capabilities.unbound.map((a) => a.name).join(', ') || '(none)';
+
+    const strategy = this.config.toolStrategy ?? 'full';
+    const strategyHint =
+      strategy === 'minimal'
+        ? `Use describe to inspect the service, then query with a structured filter such as { gpa: { lt: 2.0 } }.`
+        : `When querying data, prefer structured filters or OData $filter (e.g. "gpa lt 2.0").`;
 
     return (
       `You are an AI assistant connected to a SAP CAP application's "${this.config.service}" service. ` +
-      `You can read, create, update, and delete records, and execute custom actions.\n\n` +
+      `Tool strategy: ${strategy}.\n\n` +
       `Available entities: ${entityList}\n` +
       `Available service actions: ${actionList}\n\n` +
       `Guidelines:\n` +
-      `- When querying data, use OData $filter syntax (e.g., "name eq 'John'", "gpa lt 2.0").\n` +
+      `- ${strategyHint}\n` +
       `- String values in $filter must be wrapped in single quotes.\n` +
-      `- Use $select to fetch only needed fields for better performance.\n` +
-      `- Use $top to limit results when the user doesn't need all records.\n` +
+      `- Use $select / select to fetch only needed fields.\n` +
+      `- Use $top / top to limit results when the user doesn't need all records.\n` +
       `- When updating records, first read to get the key, then update.\n` +
       `- Always confirm destructive operations (delete) with the user if the intent is ambiguous.\n` +
+      `- Operations not listed above are blocked by policy — do not attempt them.\n` +
       `- Return results in a clear, human-readable format.\n` +
       `- If an operation fails, explain the error and suggest a fix.`
     );
@@ -270,5 +264,13 @@ export class CAPAgent {
   async getToolCount(): Promise<number> {
     await this.initialize();
     return this.tools.length;
+  }
+
+  /**
+   * Returns the capability map this agent is governed by — what it may read,
+   * write, and invoke. Does not require the LLM to be resolvable.
+   */
+  async getCapabilityMap(): Promise<ServiceCapabilityMap> {
+    return this.toolkit.getCapabilityMap();
   }
 }

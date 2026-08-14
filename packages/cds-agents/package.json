@@ -1,12 +1,18 @@
 {
   "name": "cds-agents",
-  "version": "1.0.0",
-  "description": "AI agent integration for SAP CAP — auto-generates LangChain/LangGraph tools from CDS service definitions",
+  "version": "1.1.0",
+  "description": "Turn SAP CAP services into governed AI capabilities for LangChain, LangGraph, MCP, and enterprise agents",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "homepage": "https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT#readme",
+  "bugs": {
+    "url": "https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT/issues"
+  },
   "files": [
     "dist",
     "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
     "assets"
   ],
   "scripts": {
@@ -20,11 +26,13 @@
     "sap",
     "cap",
     "cds",
-    "ai",
+    "sap-cap",
     "agent",
     "langchain",
     "langgraph",
+    "mcp",
     "odata",
+    "odata-v4",
     "llm",
     "openai",
     "anthropic",
@@ -32,9 +40,11 @@
     "tools"
   ],
   "license": "MIT",
+  "author": "Nagarjun Das",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Nagarjundas1994-AiAgents/cds-agents"
+    "url": "git+https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT.git",
+    "directory": "packages/cds-agents"
   },
   "engines": {
     "node": ">=18.0.0"

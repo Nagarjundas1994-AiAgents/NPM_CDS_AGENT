@@ -186,8 +186,14 @@ describe('ODataExecutor', () => {
       });
 
       const result = await executor.read('Students');
-      expect(result).toContain('OData Error');
-      expect(result).toContain('Entity not found');
+      expect(result).toMatchObject({
+        type: 'ODataError',
+        status: 404,
+        service: 'StudentService',
+        entity: 'Students',
+        operation: 'read',
+        message: 'Entity not found',
+      });
     });
 
     it('handles 204 No Content (DELETE success)', async () => {
@@ -208,7 +214,102 @@ describe('ODataExecutor', () => {
       });
 
       const result = await executor.read('Students');
-      expect(result).toContain('HTTP Error 500');
+      expect(result).toMatchObject({
+        type: 'ODataError',
+        status: 500,
+        service: 'StudentService',
+        entity: 'Students',
+        operation: 'read',
+        message: 'Internal Server Error',
+      });
+    });
+  });
+
+  // ─── Policy Enforcement ───────────────────────────────────────────────────
+
+  describe('policy enforcement', () => {
+    const governed = () =>
+      new ODataExecutor({
+        baseUrl: 'http://localhost:4004',
+        servicePath: 'StudentService',
+        policy: {
+          Students: { read: true, create: true, update: true, delete: false },
+        },
+      });
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ value: [] }),
+      });
+    });
+
+    it('refuses a denied operation without touching the network', async () => {
+      const result = await governed().delete('Students', '123');
+
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        type: 'ODataError',
+        status: 403,
+        entity: 'Students',
+        operation: 'delete',
+      });
+    });
+
+    it('refuses entities absent from the policy', async () => {
+      const result = await governed().read('Grades');
+
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(result).toMatchObject({ status: 403, entity: 'Grades' });
+    });
+
+    it('allows permitted operations through', async () => {
+      await governed().update('Students', '123', { gpa: 3.5 });
+      expect(mockFetch).toHaveBeenCalled();
+    });
+
+    it('enforces policy in dryRun mode too', async () => {
+      const dry = new ODataExecutor({
+        baseUrl: 'http://localhost:4004',
+        servicePath: 'StudentService',
+        dryRun: true,
+        policy: { Students: { read: true, create: false, update: false, delete: false } },
+      });
+
+      expect(await dry.create('Students', { gpa: 4 })).toMatchObject({ status: 403 });
+    });
+
+    it('leaves the executor ungoverned when no policy is given', async () => {
+      mockFetch.mockResolvedValue({ ok: true, status: 204 });
+      await executor.delete('Students', '123');
+      expect(mockFetch).toHaveBeenCalled();
+    });
+  });
+
+  // ─── Literal Escaping ─────────────────────────────────────────────────────
+
+  describe('literal escaping', () => {
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ value: [] }),
+      });
+    });
+
+    it("escapes single quotes in string keys", async () => {
+      await executor.update("Students", "O'Brien", { gpa: 3.5 });
+      expect(mockFetch.mock.calls[0][0]).toBe(
+        "http://localhost:4004/odata/v4/StudentService/Students('O''Brien')"
+      );
+    });
+
+    it('escapes single quotes in function parameters', async () => {
+      await executor.callUnboundFunction('getStats', { category: "CS' or true" });
+      expect(mockFetch.mock.calls[0][0]).toBe(
+        "http://localhost:4004/odata/v4/StudentService/getStats(category='CS'' or true')"
+      );
     });
   });
 });

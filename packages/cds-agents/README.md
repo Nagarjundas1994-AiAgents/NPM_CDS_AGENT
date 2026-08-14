@@ -1,251 +1,149 @@
 <div align="center">
-  <img src="./assets/logo.svg" width="120" alt="cds-agents Logo" />
+  <img src="./assets/logo.svg" width="120" alt="cds-agents logo" />
   <h1>cds-agents</h1>
-  <p><strong>AI tool generation for SAP CAP</strong></p>
-  <p><em>Auto-generates LangChain tools from your CDS service definitions — so an LLM can talk to your CAP backend.</em></p>
+  <p><strong>The SAP CAP-native tool layer for agentic applications.</strong></p>
+  <p>Turn any SAP CAP service into governed AI capabilities for LangChain, LangGraph, MCP, and enterprise agents.</p>
 
   [![npm version](https://img.shields.io/npm/v/cds-agents.svg?style=for-the-badge&color=blue)](https://www.npmjs.com/package/cds-agents)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](./LICENSE)
+  [![CI](https://img.shields.io/github/actions/workflow/status/Nagarjundas1994-AiAgents/NPM_CDS_AGENT/ci.yml?style=for-the-badge&label=CI)](https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT/actions)
   [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![LangChain](https://img.shields.io/badge/LangChain-121212?style=for-the-badge)](https://js.langchain.com/)
 </div>
 
 <br/>
 
-> **Talk to your SAP CAP database in plain English.**
-
-`cds-agents` reads your Core Data Services (CDS) schema and **auto-generates strongly-typed [LangChain](https://js.langchain.com/) tools** — CRUD tools for every entity and execution tools for every bound/unbound action. It can spin up a ready-to-use [ReAct agent](https://langchain-ai.github.io/langgraph/concepts/agentic_concepts/#react-implementation), or hand you the raw tools so you can plug them into your own LangGraph workflow.
-
 ```typescript
-import { CAPAgent } from 'cds-agents';
+import { CAPToolkit } from 'cds-agents';
 
-const agent = new CAPAgent({
-  service:  'StudentService',
-  baseUrl:  'http://localhost:4004',
-  model:    'gpt-4o',
-  tools:    'auto',
-  auth:     { type: 'basic', user: 'alice', pass: 'admin' }
+const toolkit = new CAPToolkit({
+  service: 'StudentService',
+  baseUrl: 'http://localhost:4004',
+  toolStrategy: 'minimal',   // describe + query — not 400 CRUD tools
+  allowDelete: false,
 });
 
-const answer = await agent.invoke("Put all students below 2.0 GPA on academic probation");
-console.log(answer);
+const tools = await toolkit.getTools();
 ```
 
 ---
 
-## 🎯 What This Package Is (and Isn't)
+## What is cds-agents?
 
-### ✅ What It Is
+`cds-agents` is the **capability layer between SAP CAP and AI agents**.
 
-`cds-agents` is a **tool-generation bridge** between SAP CAP and the LangChain/LangGraph ecosystem. It solves one problem extremely well:
+It reads your CDS / CSN model and exposes a governed set of tools — not a pile of generated HTTP wrappers. The same capability map can feed a LangChain toolkit today and an MCP server next.
 
-> *"I have a CAP service. I want an LLM to read, create, update, delete records and call actions on it — without writing hundreds of lines of boilerplate."*
+```text
+                 cds-agents
+                     │
+       ┌─────────────┼─────────────┐
+       ▼             ▼             ▼
+  CDS Introspection  Tool Layer    Runtime
+       │             │             │
+       ▼             ▼             ▼
+     CSN/CDS     LangChain      OData V4
+                    Tools       Executor
+       │
+       └──────────────┬──────────────┘
+                      ▼
+               Agent Framework
+            LangGraph / MCP / custom
+```
 
-Concretely, it:
+**Two modes, one model:**
 
-1. **Parses** your CDS schema (`.cds` files or compiled CSN models)
-2. **Generates** LangChain-compatible tools with rich Zod schemas and human-readable descriptions
-3. **Executes** OData V4 requests against your running CAP server
-4. **Optionally** wraps everything in a pre-built single-loop ReAct agent for immediate use
+| Mode | Class | Use when |
+|---|---|---|
+| Tool layer | `CAPToolkit` | You want raw tools for LangGraph, a custom agent, or a future MCP adapter |
+| Ready-made agent | `CAPAgent` | You want a ReAct loop against one CAP service right now |
 
-### ❌ What It Is NOT
+`CAPToolkit` is the product. `CAPAgent` is the convenience wrapper.
 
-This is **not** a multi-agent orchestration framework. If you need:
+This is **not** a multi-agent orchestrator. For supervisors, branching, or human-in-the-loop graphs, generate tools with `CAPToolkit` and compose them in LangGraph.
 
-| Capability | Use Instead |
+---
+
+## Why?
+
+Integrating LLMs with enterprise CAP services usually means hand-written tools, hallucinated OData, and an ungoverned CRUD surface.
+
+| Without cds-agents | With cds-agents |
 |---|---|
-| Multi-agent graphs (supervisor → worker) | [LangGraph](https://langchain-ai.github.io/langgraph/) directly |
-| Complex branching / conditional routing | LangGraph's `StateGraph` |
-| Human-in-the-loop approval workflows | LangGraph + interrupt/checkpoint |
-| Agent-to-agent communication | LangGraph / [CrewAI](https://www.crewai.com/) / [AutoGen](https://github.com/microsoft/autogen) |
-| Cross-service orchestration | Build a custom LangGraph graph using `CAPToolkit` |
-
-**However**, `cds-agents` is designed to **compose** with those frameworks. Use `CAPToolkit` to generate the tools, then wire them into any graph topology you want.
+| One LangChain tool per entity operation | A capability map with `minimal` / `crud` / `actions` / `full` strategies |
+| Manual Zod schemas that drift from CDS | CDS types mapped to Zod automatically |
+| Raw HTTP to OData | `ODataExecutor` with auth, timeout, dry-run, structured errors |
+| Hundreds of tools on a large service | Token-efficient `describe` + `query` |
+| Framework lock-in | One CAP model → multiple AI protocols |
 
 ---
 
-## ⚡ Why cds-agents?
-
-Integrating LLM agents with traditional enterprise APIs usually requires massive amounts of fragile connector boilerplate. `cds-agents` eliminates this out of the box.
-
-| The Old Way (Without `cds-agents`) | The AI-Native Way (With `cds-agents`) |
-|------------------------------------|---------------------------------------|
-| ❌ Manually define LangChain tools for each entity | ✅ **Auto-generated** dynamically from the CDS model |
-| ❌ Write rigid Zod schemas by hand | ✅ **Schemas dynamically mapped** to match CDS types perfectly |
-| ❌ Wire HTTP calls manually for every operation | ✅ **Built-in OData v4 adapter** handles REST execution natively |
-| ❌ Days of maintaining boilerplate code | ✅ **A few lines of code.** Always in sync with your schema! |
-
----
-
-## 🔧 How It Works
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│  Your CDS Schema (.cds / CSN)                                │
-│    entity Students { key ID: UUID; name: String; ... }       │
-└──────────────────────┬───────────────────────────────────────┘
-                       │  cds.load()
-                       ▼
-              ┌─────────────────┐
-              │  Model Loader   │  Introspects entities, actions, types
-              └────────┬────────┘
-                       │
-                       ▼
-              ┌─────────────────┐
-              │  Schema Mapper  │  CDS types → Zod schemas + LLM descriptions
-              └────────┬────────┘
-                       │
-                       ▼
-              ┌─────────────────┐
-              │ Tool Generator  │  4 CRUD tools/entity + action/function tools
-              └────────┬────────┘
-                       │
-           ┌───────────┴───────────┐
-           ▼                       ▼
-  ┌─────────────────┐    ┌──────────────────┐
-  │    CAPAgent      │    │   CAPToolkit      │
-  │  (Ready-to-use   │    │  (Raw tools for   │
-  │   ReAct agent)   │    │   custom graphs)  │
-  └────────┬─────────┘    └──────────────────┘
-           │
-           ▼
-  ┌─────────────────┐
-  │ OData Executor  │  Sends HTTP requests to your running CAP server
-  └────────┬────────┘
-           │
-           ▼
-  ┌─────────────────┐
-  │  SAP CAP Server │  (OData V4 — cds watch / cds serve)
-  └─────────────────┘
-```
-
-The entire pipeline runs **lazily** — nothing happens until the first `invoke()` or `getTools()` call.
-
----
-
-## 📦 Installation
+## 30-second quick start
 
 ```bash
-npm install cds-agents zod @langchain/core
+npm install cds-agents zod @langchain/core @langchain/openai
 ```
-
-You must also install your preferred LLM provider package:
-
-```bash
-# 🤖 For OpenAI (gpt-4o, o1, o3)
-npm install @langchain/openai
-
-# 🧠 For Anthropic (claude-3.5-sonnet, claude-opus)
-npm install @langchain/anthropic
-
-# 🌠 For Google Gemini (gemini-2.0-flash, gemini-1.5-pro)
-npm install @langchain/google-genai
-```
-
-### Peer Dependencies
-
-| Package | Minimum Version | Required? |
-|---|---|:---:|
-| `@sap/cds` | `>=7.0.0` | ✅ Yes |
-| `zod` | `>=3.20.0` | ✅ Yes |
-| `@langchain/core` | `>=1.1.40` | ✅ Yes |
-| `@langchain/openai` | `>=1.0.0` | If using OpenAI |
-| `@langchain/anthropic` | `>=1.0.0` | If using Anthropic |
-| `@langchain/google-genai` | `>=0.1.0` | If using Gemini |
-
-### Prerequisites
-
-- **Node.js 18+**
-- A **running SAP CAP application** with at least one OData V4 service exposed
-- An **LLM API key** set as an environment variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY`)
-
----
-
-## 🚀 Quick Start
-
-### 1. Start your SAP CAP Application
-
-```bash
-cd my-cap-project
-cds watch
-```
-
-### 2. Scaffold your AI Agent
 
 ```typescript
 import { CAPAgent } from 'cds-agents';
 
 const agent = new CAPAgent({
-  service: 'StudentService',         // Name of your CDS service
-  baseUrl: 'http://localhost:4004',  // URL of your running CAP server
-  model:   'gpt-4o',                // Any supported model string
+  service: 'StudentService',
+  baseUrl: 'http://localhost:4004',
+  model: 'gpt-4o',
+  toolStrategy: 'minimal',
 });
 
-const response = await agent.invoke("Enrol Alice Johnson in Database Systems for Spring 2024");
-console.log(response);
+const answer = await agent.invoke(
+  'Put all students below 2.0 GPA on academic probation'
+);
 ```
 
-### 3. What happens under the hood
+Prerequisites: Node.js 18+, a running CAP OData V4 service, and an LLM key (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY`).
 
-On the first `invoke()` call, the agent automatically:
-1. **Loads & introspects** your `.cds` / CSN model via `cds.load()`
-2. **Discovers** all entities, bound actions, and unbound functions in the service
-3. **Generates** LangChain tools with Zod schemas derived from your CDS types
-4. **Resolves** the LLM provider from your model string (e.g. `gpt-4o` → OpenAI)
-5. **Creates** a LangGraph ReAct agent wired with all the tools
-6. **Executes** OData V4 calls and returns a human-readable response
+Provider packages are optional peer dependencies — install only the one you use (`@langchain/openai`, `@langchain/anthropic`, or `@langchain/google-genai`).
 
 ---
 
-## 📖 API Reference
+## Architecture
 
-### `CAPAgent`
+Tool generation and agent execution are separate on purpose.
 
-The primary class — gives you a ready-to-use ReAct agent wired to your CAP service.
-
-```typescript
-const agent = new CAPAgent(config: CAPAgentConfig);
+```text
+                 CDS / CSN
+                     │
+                     ▼
+              CAP Introspection
+                     │
+                     ▼
+             Capability registry
+           ┌─────────┴─────────┐
+           ▼                   ▼
+     LangChain tools        MCP tools (planned)
+           │                   │
+           ▼                   ▼
+      LangGraph              OpenCode /
+      / CAPAgent             Claude / others
+           │                   │
+           └─────────┬─────────┘
+                     ▼
+                CAP runtime
+                     │
+                     ▼
+                OData / CQL
 ```
 
-#### CAPAgentConfig Options
+1. **Model loader** introspects entities, actions, and functions from CDS/CSN.
+2. **Capability map** decides *what* the service may expose, given `toolStrategy` and policy.
+3. **Tool adapters** turn that map into LangChain tools (MCP adapter is next).
+4. **OData executor** performs the actual CAP calls.
 
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `service` | `string` | *required* | CDS service name (e.g. `'StudentService'`) |
-| `baseUrl` | `string` | *required* | Base URL of the running CAP service |
-| `model` | `string` | *required* | LLM model identifier (see [Model Support](#-model-support)) |
-| `tools` | `'auto' \| string[]` | `'auto'` | Which entities to generate tools for (`'auto'` = all) |
-| `exclude` | `string[]` | `[]` | Omit specific entities from tool generation |
-| `auth` | `AuthConfig` | `{ type: 'none' }` | Authentication strategy for the CAP service |
-| `cdsFile` | `string` | `'./'` | Path to your root CDS source file |
-| `cdsModel` | `CDSModel` | — | Pass a pre-loaded CSN model (skips `cds.load()`) |
-| `dryRun` | `boolean` | `false` | If `true`, logs HTTP requests instead of executing them |
-| `systemPrompt` | `string` | *auto* | Override the default ReAct agent system prompt |
-| `temperature` | `number` | `0` | LLM temperature (`0` = deterministic) |
-
-#### Methods
-
-```typescript
-// One-shot invocation — returns the final answer
-const answer = await agent.invoke("Find high value customers");
-
-// Real-time streaming — yields events as the agent thinks/acts
-for await (const event of agent.stream("List the newest enrollments from today")) {
-  if (event.type === 'tool_call')   console.log("Calling tool:", event.content);
-  if (event.type === 'tool_result') console.log("Got data back");
-  if (event.type === 'final')       console.log("Answer:", event.content);
-}
-
-// Extract the generated tools for inspection or custom use
-const tools = await agent.getTools();
-console.log(`Generated ${tools.length} tools`);
-```
+Nothing runs until the first `getTools()`, `getCapabilityMap()`, or `invoke()`.
 
 ---
 
-### `CAPToolkit`
+## CAPToolkit
 
-For advanced users who want the **raw tools** without the pre-built agent. Use this when you're building your own LangGraph state graphs, multi-agent systems, or custom agent topologies.
+The recommended production entry point. You get tools; you own the agent.
 
 ```typescript
 import { CAPToolkit } from 'cds-agents';
@@ -255,29 +153,157 @@ import { ChatOpenAI } from '@langchain/openai';
 const toolkit = new CAPToolkit({
   service: 'StudentService',
   baseUrl: 'http://localhost:4004',
-  tools: 'auto',
+  toolStrategy: 'minimal',
+  allowDelete: false,
 });
 
-// Get the auto-generated CDS tools
 const cdsTools = await toolkit.getTools();
+const map = await toolkit.getCapabilityMap();
 
-// Combine with your own tools from other sources
-const allTools = [...cdsTools, myWeatherTool, myCalculatorTool];
-
-// Use in your own agent / graph / workflow
-const customAgent = createReactAgent({
+const agent = createReactAgent({
   llm: new ChatOpenAI({ model: 'gpt-4o' }),
-  tools: allTools,
+  tools: [...cdsTools, myCalculatorTool],
 });
 ```
 
-**This is the recommended approach for production** — `CAPToolkit` gives you full control over the agent architecture while `cds-agents` handles the tedious CDS → LangChain mapping.
+### Tool strategies
+
+A service with 100 entities can generate 400+ CRUD tools. That burns context and hurts tool selection.
+
+```ts
+toolStrategy: 'minimal' | 'crud' | 'actions' | 'full'
+```
+
+| Strategy | Tools | When to use |
+|---|---|---|
+| `minimal` | `describe`, `query` | Large models, production defaults, MCP-shaped clients |
+| `crud` | `read_*` / `create_*` / `update_*` / `delete_*` | Small services that want explicit entity tools |
+| `actions` | bound + unbound actions/functions | Side-effect operations only |
+| `full` | CRUD + actions | Backward-compatible default |
+
+```typescript
+const toolkit = new CAPToolkit({
+  service: 'StudentService',
+  baseUrl: 'http://localhost:4004',
+  toolStrategy: 'minimal',
+});
+```
+
+**Minimal mode**
+
+- `describe` — returns the capability map (or one entity)
+- `query` — structured read: `{ entity, filter, select, orderBy, top, skip }`
+
+```typescript
+await query.invoke({
+  entity: 'Students',
+  filter: { gpa: { lt: 2.0 }, status: 'active' },
+  select: ['ID', 'firstName', 'gpa'],
+  orderBy: ['gpa asc'],
+  top: 10,
+});
+// → $filter=gpa lt 2 and status eq 'active'
+```
+
+Raw OData is still accepted: `filter: "gpa lt 2.0"`.
+
+### Governance
+
+Policy is **enforced at the executor**, not just at tool generation. Withholding a tool
+only hides an operation from the model; anything holding the executor could still perform
+it. A denied call is refused before any HTTP request and comes back as a `403` `ODataError`.
+
+```typescript
+new CAPToolkit({
+  service: 'StudentService',
+  baseUrl: 'http://localhost:4004',
+  allowCreate: true,
+  allowUpdate: true,
+  allowDelete: false,
+});
+```
+
+**Your CDS model wins.** Config can take permissions away; it can never grant them. These
+annotations are honoured during both generation and execution:
+
+| Annotation | Effect |
+|---|---|
+| `@readonly` | read only — no create/update/delete tools, writes refused |
+| `@insertonly` | create only — not queryable, absent from `query` |
+| `@Capabilities.DeleteRestrictions.Deletable: false` | no delete (same for `Insert`/`Update`/`Read`) |
+
+```typescript
+// A @readonly projection stays read-only no matter what the config asks for.
+const map = await toolkit.getCapabilityMap();
+map.entities.find((e) => e.name === 'Reports')?.operations; // ['read']
+```
+
+`getCapabilityMap()` is the audit surface: what it advertises is exactly what the executor
+permits — both are derived from the same object, so they cannot drift.
+
+Entity scoping still works: `tools: ['Students', 'Courses']` or `exclude: ['AuditLogs']`.
+Excluded entities are refused at the executor too, not merely un-tooled.
 
 ---
 
-### `ODataExecutor`
+## MCP
 
-The low-level OData V4 HTTP client. Used internally by the generated tools, but available for direct use without any LLM.
+MCP is the next first-class adapter, not a side experiment.
+
+> One CAP model → multiple AI integration protocols.
+
+```text
+CAP + OData only          → traditional application integration
+CAP + cds-agents          → LLM tool integration
+CAP + MCP                 → standardized AI capability integration
+CAP + cds-agents + MCP    → AI-native CAP capability layer
+```
+
+The capability map already looks like an MCP surface:
+
+```json
+{
+  "service": "StudentService",
+  "strategy": "minimal",
+  "entities": [{ "name": "Students", "operations": ["read"], "keys": ["ID"] }],
+  "unbound": [{ "name": "enrollStudent", "kind": "action" }]
+}
+```
+
+Planned MCP tools: `describe`, `query`, then `execute_action`. See [docs/mcp](../../docs/mcp/README.md) for the protocol notes and Inspector examples.
+
+---
+
+## CAPAgent
+
+A ready-made LangGraph ReAct agent for demos and small apps.
+
+```typescript
+const agent = new CAPAgent({
+  service: 'StudentService',
+  baseUrl: 'http://localhost:4004',
+  model: 'gpt-4o',
+  toolStrategy: 'minimal',
+  auth: { type: 'basic', user: 'alice', pass: 'admin' },
+});
+
+const answer = await agent.invoke('List students with GPA below 2.0');
+
+for await (const event of agent.stream('Show enrollment statistics')) {
+  if (event.type === 'tool_call') console.log(event.content);
+  if (event.type === 'final') console.log(event.content);
+}
+```
+
+Model strings resolve the provider: `gpt-*` / `o1-*` / `o3-*` → OpenAI, `claude-*` → Anthropic, `gemini-*` → Google.
+
+For production graphs, prefer `CAPToolkit`.
+
+---
+
+## ODataExecutor
+
+Low-level OData V4 client. Used by generated tools; usable without an LLM.
 
 ```typescript
 import { ODataExecutor } from 'cds-agents';
@@ -285,300 +311,172 @@ import { ODataExecutor } from 'cds-agents';
 const executor = new ODataExecutor({
   baseUrl: 'http://localhost:4004',
   servicePath: 'StudentService',
-  auth: { type: 'basic', user: 'alice', pass: 'admin' },
+  auth: { type: 'bearer', token: process.env.CAP_TOKEN! },
+  timeoutMs: 15_000,
 });
 
-// CRUD operations
-await executor.read('Students', { '$filter': "gpa lt 2.0", '$top': 10 });
+await executor.read('Students', { $filter: 'gpa lt 2.0', $top: 10 });
 await executor.create('Students', { firstName: 'John', lastName: 'Doe' });
-await executor.update('Students', 'uuid-here', { gpa: 3.5 });
-await executor.delete('Students', 'uuid-here');
+await executor.callUnboundAction('enrollStudent', { studentId, courseId });
+```
 
-// Custom actions & functions
-await executor.callUnboundAction('enrollStudent', { studentId: '...', courseId: '...' });
-await executor.callUnboundFunction('getStatistics');
+Failed calls return a structured object the model can act on:
+
+```json
+{
+  "type": "ODataError",
+  "status": 403,
+  "service": "StudentService",
+  "entity": "Students",
+  "operation": "update",
+  "message": "Insufficient privileges"
+}
 ```
 
 ---
 
-## 🤖 Model Support
+## Security
 
-The LLM provider is auto-detected from your model string:
-
-| Model Pattern | Provider | Package Required | API Key Env Var |
-|---|---|---|---|
-| `gpt-*`, `o1-*`, `o3-*` | OpenAI | `@langchain/openai` | `OPENAI_API_KEY` |
-| `claude-*` | Anthropic | `@langchain/anthropic` | `ANTHROPIC_API_KEY` |
-| `gemini-*` | Google | `@langchain/google-genai` | `GOOGLE_API_KEY` |
-
----
-
-## ⚙️ What Gets Generated?
-
-### Entity CRUD Tools (4 per entity)
-
-| Tool Name | HTTP | Description |
-|---|---|---|
-| `read_{Entity}` | `GET` | Query with `$filter`, `$top`, `$skip`, `$orderby`, `$select`, `$expand` |
-| `create_{Entity}` | `POST` | Create a record with required/optional field validation |
-| `update_{Entity}` | `PATCH` | Partial update by primary key |
-| `delete_{Entity}` | `DELETE` | Delete by primary key |
-
-### Service-Level Action/Function Tools
-
-| Tool Name | HTTP | Description |
-|---|---|---|
-| `action_{actionName}` | `POST` | Execute a custom side-effect operation |
-| `function_{funcName}` | `GET` | Invoke a read-only function |
-
-### Entity-Bound Action/Function Tools
-
-| Tool Name | HTTP | Description |
-|---|---|---|
-| `action_{Entity}_{name}` | `POST` | Action scoped to a specific entity instance |
-| `function_{Entity}_{name}` | `GET` | Function scoped to a specific entity instance |
-
-**Example**: A service with 3 entities, 2 unbound actions, and 1 unbound function generates **15 tools** (3×4 + 2 + 1).
-
----
-
-## 🧩 CDS Type Mapping
-
-All CDS types are mapped to Zod validation schemas with LLM-friendly `.describe()` annotations:
-
-| CDS Type | Zod Schema | LLM Description |
-|---|---|---|
-| `cds.String` | `z.string()` | String value |
-| `cds.UUID` | `z.string().uuid()` | Strict UUID format |
-| `cds.Integer` | `z.number().int()` | Integer value |
-| `cds.Decimal` | `z.number()` | Decimal number |
-| `cds.Boolean` | `z.boolean()` | Boolean true/false |
-| `cds.Date` | `z.string()` | Date (YYYY-MM-DD) |
-| `cds.DateTime` | `z.string()` | ISO 8601 datetime |
-| `cds.Association` | `z.string()` | Foreign key reference |
-
----
-
-## 🛡️ Configuration Recipes
-
-### Entity Scoping
-
-Reduce LLM token usage and hide sensitive tables:
+Local demos often use Basic auth. That is not an enterprise default.
 
 ```typescript
-// Only expose Students and Courses to the LLM
-new CAPAgent({ tools: ['Students', 'Courses'], /* ... */ });
-
-// Expose everything except audit logs
-new CAPAgent({ tools: 'auto', exclude: ['AuditLogs'], /* ... */ });
+auth: { type: 'none' }
+auth: { type: 'basic', user, pass }
+auth: { type: 'bearer', token }
 ```
 
-### Authentication
+Bearer is the path to XSUAA / IAS / principal propagation: obtain a token from your IdP and pass it through. Native `oauth2` / `xsuaa` / `ias` providers and annotation-aware `@requires` / `@restrict` tool generation are on the [roadmap](../../docs/ROADMAP.md).
+
+Always disable deletes in production unless you have a human-in-the-loop policy:
 
 ```typescript
-// No auth (local dev)
-{ auth: { type: 'none' } }
-
-// Basic auth
-{ auth: { type: 'basic', user: 'system_agent', pass: 'suP3R_s3cReT' } }
-
-// Bearer token (JWT)
-{ auth: { type: 'bearer', token: 'eyJhbGciOi...' } }
+{ allowDelete: false, dryRun: process.env.NODE_ENV !== 'production' }
 ```
 
-### Dry-Run Mode
-
-Test what the agent would do without touching the database:
-
-```typescript
-const agent = new CAPAgent({
-  ...config,
-  dryRun: true,
-});
-
-await agent.invoke("Delete all graduated students");
-// Console Output:
-// [cds-agents DRY RUN] { method: 'GET', url: '.../Students?$filter=status eq graduated' }
-// [cds-agents DRY RUN] { method: 'DELETE', url: '.../Students(c9d0e1f2-...)' }
-```
-
-### Using with Custom LangGraph Graphs
-
-The real power of `cds-agents` shows when you compose it into larger architectures:
-
-```typescript
-import { CAPToolkit } from 'cds-agents';
-import { StateGraph, MessagesAnnotation } from '@langchain/langgraph';
-import { ChatOpenAI } from '@langchain/openai';
-
-// Generate tools for multiple CAP services
-const hrToolkit = new CAPToolkit({ service: 'HRService', baseUrl: '...' });
-const finToolkit = new CAPToolkit({ service: 'FinanceService', baseUrl: '...' });
-
-const hrTools = await hrToolkit.getTools();
-const finTools = await finToolkit.getTools();
-
-// Build a multi-agent graph where each node handles a different domain
-const graph = new StateGraph(MessagesAnnotation)
-  .addNode('hr_agent', createReactAgent({ llm, tools: hrTools }))
-  .addNode('finance_agent', createReactAgent({ llm, tools: finTools }))
-  .addNode('router', routerNode)
-  .addEdge('__start__', 'router')
-  // ... add conditional edges, etc.
-  .compile();
-```
+`dryRun: true` logs the OData request and executes nothing.
 
 ---
 
-## 🎓 Demo Application
+## Examples
 
-The repository includes a working university management demo:
+### University demo
 
 ```
 demo-app/
-├── db/
-│   └── schema.cds          # Students, Courses, Enrollments
-├── srv/
-│   ├── student-service.cds  # Service with actions & functions
-│   └── student-service.js   # Action implementations
-└── chat.mjs                 # Interactive CLI chat agent
+├── db/schema.cds              Students, Courses, Enrollments
+├── srv/student-service.cds    actions + functions
+└── chat.mjs                   CLI ReAct agent
 ```
-
-### Run the Demo
 
 ```bash
-# Terminal 1 — Start the CAP server
-cd demo-app
-npm install
-cds watch
-
-# Terminal 2 — Chat with the AI agent
-export OPENAI_API_KEY=sk-...        # or ANTHROPIC_API_KEY / GOOGLE_API_KEY
-cd demo-app
-node chat.mjs
+cd demo-app && npm install && cds watch     # terminal 1
+export OPENAI_API_KEY=sk-...
+node chat.mjs                               # terminal 2
 ```
 
-### Example Prompts
+Prompts:
 
-```
-You: List all students with GPA below 2.0
-You: Create a new course called Machine Learning with code ML101, 4 credits, CS department
-You: Put all students with GPA below 2.0 on academic probation
-You: Enroll Alice Johnson in Database Systems for Spring 2024
-You: Show enrollment statistics
-```
+- List all students with GPA below 2.0
+- Create a course called Machine Learning, code ML101, 4 credits, CS
+- Put all students with GPA below 2.0 on academic probation
+- Enroll Alice Johnson in Database Systems for Spring 2024
+- Show enrollment statistics
 
----
+### Custom LangGraph
 
-## 🧬 Architecture Diagram
+```typescript
+const hr = new CAPToolkit({ service: 'HRService', baseUrl, toolStrategy: 'minimal' });
+const fin = new CAPToolkit({ service: 'FinanceService', baseUrl, toolStrategy: 'minimal' });
 
-```mermaid
-graph TD;
-    User([💬 User Query]) --> Agent[🤖 CAPAgent - LangGraph ReAct];
-    
-    subgraph "Initialization (first call only)"
-      schema[\CDS Schema files/] --> Loader[CDS Model Loader];
-      Loader --> Zod[Schema Mapper — CDS → Zod]
-      Zod --> TG[Tool Generator]
-    end
-    
-    TG --> Agent
-    
-    Agent <--> LLM((🧠 LLM Provider));
-    
-    Agent --> Exec[OData Executor];
-    
-    Exec <--> CAP[🌐 SAP CAP Service — OData V4];
+const graph = new StateGraph(MessagesAnnotation)
+  .addNode('hr', createReactAgent({ llm, tools: await hr.getTools() }))
+  .addNode('finance', createReactAgent({ llm, tools: await fin.getTools() }));
 ```
 
 ---
 
-## 🧪 Testing
+## Advanced usage
 
-```bash
-# Run the full unit test suite
-pnpm test
-
-# Run tests in watch mode during development
-pnpm test:watch
-
-# Type-check without emitting
-pnpm lint
-```
-
-The test suite covers:
-- **Schema Mapper** — CDS type → Zod schema conversion
-- **Model Loader** — CDS model introspection and entity extraction
-- **Tool Generator** — Tool generation, naming, and schema correctness
-- **OData Executor** — HTTP request construction and response handling
-
----
-
-## ⚠️ Current Limitations
-
-| Limitation | Details |
+| Need | How |
 |---|---|
-| **Single-agent only** | `CAPAgent` wraps a basic ReAct loop — no multi-agent orchestration out of the box. Use `CAPToolkit` for custom graphs. |
-| **No conversation memory** | Each `invoke()` call is stateless. For multi-turn conversations, manage message history externally. |
-| **No streaming OData** | OData calls are request/response; `stream()` streams the *agent's reasoning*, not the data. |
-| **Single service per agent** | Each `CAPAgent` / `CAPToolkit` targets one CDS service. For multi-service setups, create multiple toolkits and merge tools. |
-| **Local CDS model required** | The schema is loaded via `cds.load()` — your `.cds` files must be accessible at runtime. |
-| **No OData batch requests** | Each tool call generates individual HTTP requests, not `$batch`. |
+| Pre-loaded CSN | `cdsModel: compiledCsn` (skips `cds.load()`) |
+| CDS path | `cdsFile: './srv/student-service.cds'` |
+| Inspect capabilities | `await toolkit.getCapabilityMap()` |
+| Governed CAP calls without a tool | `await toolkit.getExecutor()` |
+| Hide entities | `exclude: ['AuditLogs']` |
+| Custom system prompt | `systemPrompt` on `CAPAgent` |
+| Structured query (no LLM) | `toODataFilter({ gpa: { lt: 2 } })` |
+
+CDS → Zod mapping: `String` → `z.string()`, `UUID` → `z.string().uuid()`, `Integer` → `z.number().int()`, associations → foreign-key strings.
 
 ---
 
-## 🗺️ Roadmap
+## API reference
 
-- [ ] **Conversation memory** — built-in multi-turn chat with configurable history window
-- [ ] **Multi-service agents** — single agent spanning multiple CDS services
-- [ ] **OData `$batch` support** — batch multiple operations for performance
-- [ ] **Streaming tool execution** — stream OData results for large datasets
-- [ ] **BTP authentication** — native XSUAA / IAS token handling
-- [ ] **CDS annotations** — honor `@readonly`, `@insertonly`, `@restrict` for smarter tool generation
-- [ ] **Pre-built multi-agent templates** — supervisor/worker patterns using CAPToolkit
+### `CAPToolkit` / `CAPAgent` config
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `service` | `string` | required | CDS service name |
+| `baseUrl` | `string` | required | Running CAP service URL |
+| `model` | `string` | required on `CAPAgent` | LLM id (`gpt-4o`, `claude-*`, `gemini-*`) |
+| `toolStrategy` | `'minimal' \| 'crud' \| 'actions' \| 'full'` | `'full'` | Tool surface |
+| `allowCreate` / `allowUpdate` / `allowDelete` | `boolean` | `true` | Destructive-operation policy |
+| `tools` | `'auto' \| string[]` | `'auto'` | Entity allow-list |
+| `exclude` | `string[]` | `[]` | Entity deny-list |
+| `auth` | `AuthConfig` | `{ type: 'none' }` | `none` / `basic` / `bearer` |
+| `timeoutMs` | `number` | `30000` | OData HTTP timeout |
+| `dryRun` | `boolean` | `false` | Log requests, do not execute |
+| `cdsFile` / `cdsModel` | path or CSN | `'./'` | Model source |
+
+### Generated CRUD tools (`crud` / `full`)
+
+| Tool | HTTP |
+|---|---|
+| `read_{Entity}` | `GET` |
+| `create_{Entity}` | `POST` |
+| `update_{Entity}` | `PATCH` |
+| `delete_{Entity}` | `DELETE` |
+| `action_{name}` / `function_{name}` | `POST` / `GET` |
 
 ---
 
-## 🤝 Contributing
+## Current limitations
 
-Contributions are welcome! Here's how to get started:
+| Limitation | Notes |
+|---|---|
+| MCP adapter | Designed; not shipped. Capability map is the shared contract. |
+| Single service per toolkit | Compose multiple toolkits for multi-service agents. |
+| Local CDS/CSN required | Schema is loaded via `cds.load()` or `cdsModel`. |
+| No `$batch` | One HTTP request per tool call. |
+| Auth | `none` / `basic` / `bearer` only — XSUAA/IAS helpers are planned. |
+| CAPAgent is single-turn | Manage conversation history yourself. |
+
+---
+
+## Roadmap
+
+1. **Now** — product identity, capability map, tool strategies, CI, docs
+2. **Core** — richer query planning, dry-run explain, authorization annotations
+3. **MCP** — `@cds-agents/mcp`, Inspector examples, OpenCode demo
+4. **Enterprise** — OAuth / XSUAA / IAS, tenant context, tracing, approvals
+5. **DX** — `npx cds-agents inspect|mcp|doctor`
+
+Full plan: [docs/ROADMAP.md](../../docs/ROADMAP.md)
+
+---
+
+## Contributing
 
 ```bash
-# Clone the repo
-git clone https://github.com/Nagarjundas1994-AiAgents/cds-agents.git
-cd cds-agents
-
-# Install dependencies
+git clone https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT.git
+cd NPM_CDS_AGENT
 pnpm install
-
-# Run tests
 pnpm test
-
-# Build
 pnpm build
 ```
 
-### Project Structure
+Public identity is **`cds-agents`** (npm). This GitHub repository is still named `NPM_CDS_AGENT`; the published package and docs use `cds-agents`. See [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
-```
-packages/cds-agents/
-├── src/
-│   ├── index.ts            # Public API exports
-│   ├── types.ts            # TypeScript type definitions
-│   ├── model-loader.ts     # CDS model introspection
-│   ├── schema-mapper.ts    # CDS type → Zod schema mapping
-│   ├── tool-generator.ts   # LangChain tool generation
-│   ├── odata-executor.ts   # OData V4 HTTP client
-│   ├── cap-agent.ts        # CAPAgent (ready-to-use agent)
-│   └── cap-toolkit.ts      # CAPToolkit (raw tools only)
-├── tests/
-│   └── unit/               # Unit tests for each module
-└── demo-app/               # Working demo application
-```
-
----
-
-## 📜 License
-
-Released under the **MIT License**.  
+Released under the [MIT License](./LICENSE).  
 © [Nagarjun Das](https://github.com/Nagarjundas1994-AiAgents)
