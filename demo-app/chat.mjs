@@ -26,8 +26,8 @@ import * as readline from 'node:readline';
 // ─── Configuration ──────────────────────────────────────────────────────────
 // Set your preferred model and API key via environment variables:
 //   OPENAI_API_KEY=sk-... node chat.mjs
-//   ANTHROPIC_API_KEY=sk-... MODEL=claude-sonnet-4-5 node chat.mjs
-//   GOOGLE_API_KEY=... MODEL=gemini-2.0-flash node chat.mjs
+//   ANTHROPIC_API_KEY=sk-... MODEL=claude-sonnet-5 node chat.mjs
+//   GOOGLE_API_KEY=... MODEL=gemini-2.5-flash node chat.mjs
 
 const model = process.env.MODEL || 'gpt-4o';
 

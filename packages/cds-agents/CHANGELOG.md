@@ -2,6 +2,27 @@
 
 All notable changes to `cds-agents` will be documented in this file.
 
+## [1.1.2] - 2026-08-15
+
+### Added
+
+- **`model` accepts a constructed chat model**, not only a name string. The provider
+  shorthand was a closed allowlist that rejected anything unrecognised, so a new model
+  prefix or an unsupported provider had no way in. Passing an instance covers SAP
+  Generative AI Hub (`@sap-ai-sdk/langchain`), Bedrock, Ollama, and any future model.
+
+### Fixed
+
+- OpenAI detection accepted only `o1-` / `o3-`; any other `o<n>-` reasoning model fell
+  through to "Unknown model". Now `o<n>-` generally.
+- Unknown-model errors now name the instance escape hatch instead of a dead end.
+
+### Changed
+
+- `createReactAgent` is configured with `prompt` instead of the legacy `messageModifier`
+  alias (superseded in LangGraph 0.2.46; still honoured, but deprecated).
+- Refreshed stale model ids in the demo and docs.
+
 ## [1.1.1] - 2026-08-15
 
 Two showstoppers that made every HTTP call fail. Both were invisible because no test

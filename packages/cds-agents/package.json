@@ -1,6 +1,6 @@
 {
   "name": "cds-agents",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Turn SAP CAP services into governed AI capabilities for LangChain, LangGraph, MCP, and enterprise agents",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

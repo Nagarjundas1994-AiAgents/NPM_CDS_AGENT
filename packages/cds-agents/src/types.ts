@@ -1,3 +1,5 @@
+import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
+
 // ─── CDS Model Types (CSN — Core Schema Notation) ───────────────────────────
 // These mirror the shape of a compiled CDS model returned by cds.load().
 // Defined here to avoid a hard compile-time dependency on @sap/cds.
@@ -132,12 +134,19 @@ export interface CAPAgentConfig extends ToolPolicy {
   baseUrl: string;
 
   /**
-   * LLM model identifier. The provider is inferred from the model name:
-   * - 'gpt-*', 'o1-*', 'o3-*'     → OpenAI  (@langchain/openai)
-   * - 'claude-*'                    → Anthropic (@langchain/anthropic)
-   * - 'gemini-*'                    → Google  (@langchain/google-genai)
+   * The LLM, as either a model identifier or a constructed chat model.
+   *
+   * As a string, the provider is inferred from the name:
+   * - 'gpt-*', 'o<n>-*'  → OpenAI    (@langchain/openai)
+   * - 'claude-*'         → Anthropic (@langchain/anthropic)
+   * - 'gemini-*'         → Google    (@langchain/google-genai)
+   *
+   * Pass a constructed model for anything else — SAP Generative AI Hub via
+   * `@sap-ai-sdk/langchain`, Bedrock, Ollama, or a model whose name the
+   * shorthand above does not recognise yet. It is used as-is, and `temperature`
+   * is left to whatever the instance was built with.
    */
-  model: string;
+  model: string | BaseChatModel;
 
   /**
    * Which entity tools to generate:

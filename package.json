@@ -1,6 +1,6 @@
 {
   "name": "cds-agents-monorepo",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "private": true,
   "description": "Monorepo for cds-agents — the SAP CAP-native tool layer for agentic applications",
   "homepage": "https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT#readme",

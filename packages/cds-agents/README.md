@@ -302,7 +302,19 @@ for await (const event of agent.stream('Show enrollment statistics')) {
 }
 ```
 
-Model strings resolve the provider: `gpt-*` / `o1-*` / `o3-*` → OpenAI, `claude-*` → Anthropic, `gemini-*` → Google.
+Model strings resolve the provider: `gpt-*` / `o<n>-*` → OpenAI, `claude-*` → Anthropic, `gemini-*` → Google.
+
+For any other provider, pass a constructed chat model instead of a string — it is used as-is:
+
+```typescript
+import { AzureOpenAiChatClient } from '@sap-ai-sdk/langchain';
+
+new CAPAgent({
+  service: 'StudentService',
+  baseUrl: 'http://localhost:4004',
+  model: new AzureOpenAiChatClient({ modelName: 'gpt-4o' }), // SAP Generative AI Hub
+});
+```
 
 For production graphs, prefer `CAPToolkit`.
 
@@ -426,7 +438,8 @@ CDS → Zod mapping: `String` → `z.string()`, `UUID` → `z.string().uuid()`, 
 |---|---|---|---|
 | `service` | `string` | required | CDS service name |
 | `baseUrl` | `string` | required | Running CAP service URL |
-| `model` | `string` | required on `CAPAgent` | LLM id (`gpt-4o`, `claude-*`, `gemini-*`) |
+| `model` | `string \| BaseChatModel` | required on `CAPAgent` | LLM id (`gpt-*`, `o<n>-*`, `claude-*`, `gemini-*`) or a constructed chat model for any other provider |
+| `odataPath` | `string` | derived from CDS | Override the service route (proxy, custom mount) |
 | `toolStrategy` | `'minimal' \| 'crud' \| 'actions' \| 'full'` | `'full'` | Tool surface |
 | `allowCreate` / `allowUpdate` / `allowDelete` | `boolean` | `true` | Destructive-operation policy |
 | `tools` | `'auto' \| string[]` | `'auto'` | Entity allow-list |

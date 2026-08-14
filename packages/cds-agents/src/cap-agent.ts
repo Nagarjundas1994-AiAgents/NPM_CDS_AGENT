@@ -68,26 +68,34 @@ export class CAPAgent {
     this.agent = createReactAgent({
       llm,
       tools: this.tools,
-      messageModifier: systemPrompt,
+      // `prompt` replaced the legacy `messageModifier` alias in LangGraph 0.2.46.
+      prompt: systemPrompt,
     });
 
     this.initialized = true;
   }
 
   /**
-   * Resolves the LLM instance from the model name string.
+   * Resolves the LLM instance.
    *
-   * Provider detection:
-   * - gpt-*, o1-*, o3-*  → @langchain/openai (ChatOpenAI)
-   * - claude-*            → @langchain/anthropic (ChatAnthropic)
-   * - gemini-*            → @langchain/google-genai (ChatGoogleGenerativeAI)
+   * An already-constructed chat model is used as-is — that is the escape hatch
+   * for any provider this shorthand does not know, including SAP Generative AI
+   * Hub via `@sap-ai-sdk/langchain`.
+   *
+   * Otherwise the provider is inferred from the model name:
+   * - gpt-*, o<n>-*  → @langchain/openai (ChatOpenAI)
+   * - claude-*        → @langchain/anthropic (ChatAnthropic)
+   * - gemini-*        → @langchain/google-genai (ChatGoogleGenerativeAI)
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async resolveLLM(): Promise<any> {
     const modelName = this.config.model;
     const temperature = this.config.temperature ?? 0;
 
-    if (/^(gpt-|o1-|o3-)/.test(modelName)) {
+    // Pre-built model: the caller already chose the provider and its options.
+    if (typeof modelName !== 'string') return modelName;
+
+    if (/^(gpt-|o\d+-|chatgpt-)/.test(modelName)) {
       try {
         const { ChatOpenAI } = await import('@langchain/openai');
         return new ChatOpenAI({ model: modelName, temperature });
@@ -121,9 +129,11 @@ export class CAPAgent {
     }
 
     throw new Error(
-      `Unknown model "${modelName}". Supported prefixes: gpt-*, o1-*, o3-* (OpenAI), ` +
-      `claude-* (Anthropic), gemini-* (Google). ` +
-      `Make sure the corresponding @langchain provider package is installed.`
+      `Unknown model "${modelName}". The name shorthand covers gpt-* / o<n>-* (OpenAI), ` +
+      `claude-* (Anthropic), and gemini-* (Google). ` +
+      `For any other provider — SAP Generative AI Hub, Bedrock, Ollama, a new model ` +
+      `prefix — pass a constructed chat model instead of a string: ` +
+      `new CAPAgent({ model: new ChatOpenAI({ model: '${modelName}' }), ... }).`
     );
   }
 
