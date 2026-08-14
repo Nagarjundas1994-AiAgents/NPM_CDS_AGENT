@@ -33,7 +33,8 @@ export async function loadCDSModel(options: {
     // At runtime the user must have @sap/cds installed (it's a peerDependency).
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const cds = require('@sap/cds');
-    model = await cds.load(options.cdsFile || './');
+    // '*' is CAP's "whole project model". './' throws MODEL_NOT_FOUND.
+    model = await cds.load(options.cdsFile || '*');
   }
 
   // Find the service definition
@@ -72,9 +73,55 @@ export async function loadCDSModel(options: {
   return {
     model,
     serviceName: serviceFullName,
+    urlPath: cdsServicePath(
+      serviceFullName,
+      model.definitions[serviceFullName] as { '@path'?: unknown }
+    ),
     entities,
     unboundActions,
   };
+}
+
+/**
+ * Derives the HTTP path CAP serves a service at.
+ *
+ * CAP does *not* mount a service under its CDS name — `StudentService` is served
+ * at `/odata/v4/student`, so building URLs from the service name 404s.
+ *
+ * Verified against `cds compile --to serviceinfo`:
+ * | `StudentService`             | `odata/v4/student`              |
+ * | `MyBigAdminService`          | `odata/v4/my-big-admin`         |
+ * | `HRService` / `HRAdminService` | `odata/v4/hr` / `odata/v4/hradmin` |
+ * | `API_BUSINESS_PARTNERService`| `odata/v4/api-business-partner` |
+ * | `@path: '/custom-route'`     | `custom-route` (no odata/v4 prefix) |
+ *
+ * @param serviceName - Fully-qualified service name; the namespace is ignored.
+ * @param serviceDef - The service definition, read for an `@path` annotation.
+ */
+export function cdsServicePath(
+  serviceName: string,
+  serviceDef?: { '@path'?: unknown }
+): string {
+  // An explicit @path replaces the whole path, protocol prefix included.
+  const annotated = serviceDef?.['@path'];
+  if (typeof annotated === 'string' && annotated) {
+    return annotated.replace(/^\/+|\/+$/g, '');
+  }
+
+  const local = serviceName.split('.').pop() || serviceName;
+  // Only strip the suffix when something is left over.
+  const base = local.length > 'Service'.length && local.endsWith('Service')
+    ? local.slice(0, -'Service'.length)
+    : local;
+
+  const kebab = base
+    .replace(/_/g, '-')
+    // Split only at lower/digit → upper. CAP leaves acronym runs intact:
+    // HRAdmin stays "hradmin", while SalesOrder becomes "sales-order".
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .toLowerCase();
+
+  return `odata/v4/${kebab}`;
 }
 
 /**

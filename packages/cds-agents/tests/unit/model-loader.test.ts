@@ -1,5 +1,68 @@
-import { loadCDSModel, getEntityKeys, describeEntityFields } from '../../src/model-loader';
+import {
+  loadCDSModel,
+  getEntityKeys,
+  describeEntityFields,
+  cdsServicePath,
+} from '../../src/model-loader';
 import type { CDSModel, CDSEntity } from '../../src/types';
+
+// Expected values captured from `cds compile <file> --to serviceinfo` (@sap/cds 8.9.9).
+// If CAP ever changes its mounting rules, this table is what catches it.
+describe('cdsServicePath', () => {
+  it.each([
+    ['StudentService', 'odata/v4/student'],
+    ['AdminService', 'odata/v4/admin'],
+    ['CatalogService', 'odata/v4/catalog'],
+    ['Browse', 'odata/v4/browse'],
+    ['MyBigAdminService', 'odata/v4/my-big-admin'],
+    ['SalesOrderService', 'odata/v4/sales-order'],
+    // Acronym runs are not split: HRAdmin stays one word.
+    ['HRService', 'odata/v4/hr'],
+    ['HRAdminService', 'odata/v4/hradmin'],
+    ['V2Service', 'odata/v4/v2'],
+    ['API_BUSINESS_PARTNERService', 'odata/v4/api-business-partner'],
+    // The namespace is not part of the path.
+    ['university.core.StudentService', 'odata/v4/student'],
+  ])('maps %s to %s', (name, expected) => {
+    expect(cdsServicePath(name)).toBe(expected);
+  });
+
+  it('lets @path replace the whole route, protocol prefix included', () => {
+    expect(cdsServicePath('AnnotatedService', { '@path': '/custom-route' })).toBe(
+      'custom-route'
+    );
+  });
+
+  it('does not strip the suffix when nothing would be left', () => {
+    expect(cdsServicePath('Service')).toBe('odata/v4/service');
+  });
+});
+
+describe('cds.load invocation', () => {
+  afterEach(() => {
+    jest.resetModules();
+    jest.dontMock('@sap/cds');
+  });
+
+  const withMockedCds = async (cdsFile?: string) => {
+    const load = jest.fn().mockResolvedValue(mockModel);
+    jest.doMock('@sap/cds', () => ({ load }), { virtual: true });
+    const { loadCDSModel: fresh } = await import('../../src/model-loader');
+    await fresh({ serviceName: 'StudentService', cdsFile });
+    return load;
+  };
+
+  // cds.load('./') throws MODEL_NOT_FOUND — '*' is CAP's whole-project model.
+  it("defaults to '*', never './'", async () => {
+    const load = await withMockedCds();
+    expect(load).toHaveBeenCalledWith('*');
+  });
+
+  it('passes an explicit cdsFile through unchanged', async () => {
+    const load = await withMockedCds('./srv');
+    expect(load).toHaveBeenCalledWith('./srv');
+  });
+});
 
 // ─── Mock CDS Model (CSN) ──────────────────────────────────────────────────
 

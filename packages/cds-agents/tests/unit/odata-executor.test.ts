@@ -287,6 +287,46 @@ describe('ODataExecutor', () => {
     });
   });
 
+  // ─── Service URL Path ─────────────────────────────────────────────────────
+
+  describe('urlPath', () => {
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ value: [] }),
+      });
+    });
+
+    it('serves requests from the CAP-mounted path, not the service name', async () => {
+      const capExecutor = new ODataExecutor({
+        baseUrl: 'http://localhost:4004',
+        servicePath: 'StudentService',
+        urlPath: 'odata/v4/student',
+      });
+
+      await capExecutor.read('Students');
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:4004/odata/v4/student/Students',
+        expect.any(Object)
+      );
+    });
+
+    it('supports a fully custom mount path (@path or a proxy)', async () => {
+      const proxied = new ODataExecutor({
+        baseUrl: 'https://gateway.example.com',
+        servicePath: 'StudentService',
+        urlPath: '/api/students/',
+      });
+
+      await proxied.read('Students');
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://gateway.example.com/api/students/Students',
+        expect.any(Object)
+      );
+    });
+  });
+
   // ─── Literal Escaping ─────────────────────────────────────────────────────
 
   describe('literal escaping', () => {

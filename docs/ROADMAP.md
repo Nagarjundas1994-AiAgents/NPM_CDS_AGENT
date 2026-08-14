@@ -26,13 +26,16 @@ The public contract is: one CDS/CSN model, multiple AI protocols, with an explic
 - [ ] Dry-run explain (“what would this change?”)
 - [ ] Pagination helpers and `$batch`
 
-## Phase 3 — MCP
+## Phase 3 — Consume services you do not own
 
-- [ ] `@cds-agents/mcp` (or `CAPMCPServer` in this package)
-- [ ] `describe` / `query` / `execute_action` as MCP tools
-- [ ] `tools/list` and `tools/call`
-- [ ] MCP Inspector examples (see [docs/mcp](./mcp/README.md))
-- [ ] OpenCode / Claude demo against the university CAP app
+This is the differentiator. `@cap-js/mcp` requires owning and redeploying the CAP app;
+cds-agents should work against anything already running. See
+[docs/sap-ecosystem.md](./sap-ecosystem.md).
+
+- [ ] **Build the model from a live `$metadata` endpoint** — no CDS sources, no `@sap/cds`
+- [ ] Make `@sap/cds` an optional peer dependency once `$metadata` works
+- [ ] Multi-service toolkit composition with name prefixing
+- [ ] Enterprise examples against real OData shapes (SalesOrder, BusinessPartner)
 
 ## Phase 4 — Enterprise AI
 
@@ -53,6 +56,11 @@ The public contract is: one CDS/CSN model, multiple AI protocols, with an explic
 
 ## Non-goals
 
+- **An MCP server for CAP.** [`@cap-js/mcp`](https://www.npmjs.com/package/@cap-js/mcp)
+  is official, at 1.4.3, and converged on the same `describe` + `query` shape. Own the
+  CAP app? Use it. This was Phase 3; it has been dropped.
+- **Model plumbing.** `@sap-ai-sdk/langchain` covers SAP GenAI Hub models. We are the
+  tool side; the two compose.
 - Replacing LangGraph as an orchestration framework
 - Becoming a hosted agent runtime
 - Generating hundreds of per-entity tools as the recommended default

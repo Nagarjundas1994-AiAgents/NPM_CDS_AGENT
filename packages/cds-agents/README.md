@@ -31,7 +31,7 @@ const tools = await toolkit.getTools();
 
 `cds-agents` is the **capability layer between SAP CAP and AI agents**.
 
-It reads your CDS / CSN model and exposes a governed set of tools — not a pile of generated HTTP wrappers. The same capability map can feed a LangChain toolkit today and an MCP server next.
+It reads your CDS / CSN model and exposes a governed set of tools — not a pile of generated HTTP wrappers. Governance is enforced in the executor, so a denied call never leaves your process.
 
 ```text
                  cds-agents
@@ -246,31 +246,38 @@ Excluded entities are refused at the executor too, not merely un-tooled.
 
 ---
 
-## MCP
+## MCP, and SAP's official packages
 
-MCP is the next first-class adapter, not a side experiment.
+**If you own the CAP app and want MCP, use [`@cap-js/mcp`](https://www.npmjs.com/package/@cap-js/mcp).**
+It's official, at 1.4.3, and converged on the same `describe` + `query` shape used here.
+Building a competing MCP server was on our roadmap; it has been dropped.
 
-> One CAP model → multiple AI integration protocols.
+The split is producer vs consumer:
 
-```text
-CAP + OData only          → traditional application integration
-CAP + cds-agents          → LLM tool integration
-CAP + MCP                 → standardized AI capability integration
-CAP + cds-agents + MCP    → AI-native CAP capability layer
+| | `@cap-js/mcp` | `cds-agents` |
+|---|---|---|
+| Runs | inside the CAP app (plugin) | inside your agent (library) |
+| Needs to own / redeploy the service | yes | no |
+| Governance authored by | service owner, for everyone | agent author, for this agent |
+| Several services | one server each | one tool array |
+
+Use cds-agents when you're the consumer: the service is S/4HANA or a partner endpoint you
+can't add plugins to, your agent needs tighter limits than the service's own annotations,
+or one agent spans several services.
+
+[`@sap-ai-sdk/langchain`](https://www.npmjs.com/package/@sap-ai-sdk/langchain) is the
+**model** side (SAP GenAI Hub); this is the **tool** side. They compose:
+
+```typescript
+import { AzureOpenAiChatClient } from '@sap-ai-sdk/langchain';
+
+createReactAgent({
+  llm: new AzureOpenAiChatClient({ modelName: 'gpt-4o' }),
+  tools: await toolkit.getTools(),
+});
 ```
 
-The capability map already looks like an MCP surface:
-
-```json
-{
-  "service": "StudentService",
-  "strategy": "minimal",
-  "entities": [{ "name": "Students", "operations": ["read"], "keys": ["ID"] }],
-  "unbound": [{ "name": "enrollStudent", "kind": "action" }]
-}
-```
-
-Planned MCP tools: `describe`, `query`, then `execute_action`. See [docs/mcp](../../docs/mcp/README.md) for the protocol notes and Inspector examples.
+Full comparison: [docs/sap-ecosystem.md](../../docs/sap-ecosystem.md).
 
 ---
 
@@ -445,9 +452,9 @@ CDS → Zod mapping: `String` → `z.string()`, `UUID` → `z.string().uuid()`, 
 
 | Limitation | Notes |
 |---|---|
-| MCP adapter | Designed; not shipped. Capability map is the shared contract. |
+| Local CDS/CSN required | Loaded via `cds.load()` or `cdsModel`. Building the model from a live `$metadata` endpoint is the next feature — until then, "works against services you don't own" needs their CSN. |
 | Single service per toolkit | Compose multiple toolkits for multi-service agents. |
-| Local CDS/CSN required | Schema is loaded via `cds.load()` or `cdsModel`. |
+| No MCP server | Deliberate — use [`@cap-js/mcp`](https://www.npmjs.com/package/@cap-js/mcp). |
 | No `$batch` | One HTTP request per tool call. |
 | Auth | `none` / `basic` / `bearer` only — XSUAA/IAS helpers are planned. |
 | CAPAgent is single-turn | Manage conversation history yourself. |
@@ -456,11 +463,11 @@ CDS → Zod mapping: `String` → `z.string()`, `UUID` → `z.string().uuid()`, 
 
 ## Roadmap
 
-1. **Now** — product identity, capability map, tool strategies, CI, docs
-2. **Core** — richer query planning, dry-run explain, authorization annotations
-3. **MCP** — `@cds-agents/mcp`, Inspector examples, OpenCode demo
+1. **Now** — capability map, tool strategies, enforced governance, CI, docs
+2. **Core** — richer query planning, dry-run explain, `@restrict` / `@requires`
+3. **Consumer-side** — build the model from a live `$metadata` endpoint, so services you don't own need no CDS sources and no `@sap/cds`
 4. **Enterprise** — OAuth / XSUAA / IAS, tenant context, tracing, approvals
-5. **DX** — `npx cds-agents inspect|mcp|doctor`
+5. **DX** — `npx cds-agents inspect|doctor`
 
 Full plan: [docs/ROADMAP.md](../../docs/ROADMAP.md)
 

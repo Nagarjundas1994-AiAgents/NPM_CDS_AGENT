@@ -75,6 +75,7 @@ export class CAPToolkit {
     const executor = (this.executor = new ODataExecutor({
       baseUrl: this.config.baseUrl,
       servicePath: loaded.serviceName,
+      urlPath: this.config.odataPath ?? loaded.urlPath,
       auth: this.config.auth,
       dryRun: this.config.dryRun,
       timeoutMs: this.config.timeoutMs,

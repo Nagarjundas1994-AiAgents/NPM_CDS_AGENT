@@ -36,6 +36,7 @@ export interface ODataExecuteContext {
 export class ODataExecutor {
   private readonly baseUrl: string;
   private readonly servicePath: string;
+  private readonly urlPath: string;
   private readonly auth: AuthConfig;
   private readonly dryRun: boolean;
   private readonly timeoutMs: number;
@@ -44,6 +45,12 @@ export class ODataExecutor {
   constructor(config: {
     baseUrl: string;
     servicePath: string;
+    /**
+     * The HTTP path CAP serves the service at, relative to `baseUrl` — e.g.
+     * `odata/v4/student`. Defaults to `odata/v4/{servicePath}`, which is only
+     * correct when the service is actually mounted under its CDS name.
+     */
+    urlPath?: string;
     auth?: AuthConfig;
     dryRun?: boolean;
     timeoutMs?: number;
@@ -57,6 +64,10 @@ export class ODataExecutor {
     // Normalize: strip trailing slashes
     this.baseUrl = config.baseUrl.replace(/\/+$/, '');
     this.servicePath = config.servicePath.replace(/^\/+|\/+$/g, '');
+    this.urlPath = (config.urlPath ?? `odata/v4/${this.servicePath}`).replace(
+      /^\/+|\/+$/g,
+      ''
+    );
     this.auth = config.auth || { type: 'none' };
     this.dryRun = config.dryRun || false;
     this.timeoutMs = config.timeoutMs ?? 30_000;
@@ -96,7 +107,7 @@ export class ODataExecutor {
    * e.g., 'http://localhost:4004/odata/v4/StudentService'
    */
   private get odataRoot(): string {
-    return `${this.baseUrl}/odata/v4/${this.servicePath}`;
+    return `${this.baseUrl}/${this.urlPath}`;
   }
 
   /**

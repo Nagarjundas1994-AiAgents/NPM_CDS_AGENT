@@ -2,7 +2,40 @@
 
 All notable changes to `cds-agents` will be documented in this file.
 
+## [1.1.1] - 2026-08-15
+
+Two showstoppers that made every HTTP call fail. Both were invisible because no test
+exercised the real CAP conventions — mocked executors only ever checked URLs they
+themselves constructed.
+
+### Fixed
+
+- **Service URL path.** CAP does not mount a service under its CDS name: `StudentService`
+  is served at `/odata/v4/student`. Requests were built as `/odata/v4/StudentService/...`
+  and 404'd against every stock CAP app. Paths are now derived the way CAP mounts them
+  (`Service` suffix dropped, kebab-cased, namespace ignored, `@path` honoured), verified
+  against `cds compile --to serviceinfo`.
+- **`cds.load()` default.** The default `cdsFile: './'` throws `MODEL_NOT_FOUND`, so
+  zero-config setup never worked. The default is now `'*'`, CAP's whole-project model.
+
+### Added
+
+- `cdsServicePath()` — exported, so the mount path can be inspected or reused.
+- `LoadedCDSService.urlPath`, and `ODataExecutor`'s `urlPath` option.
+- `odataPath` config — override the route when a service sits behind a reverse proxy,
+  a custom mount, or is one you do not own.
+
+### Changed
+
+- **Dropped the planned MCP server.** [`@cap-js/mcp`](https://www.npmjs.com/package/@cap-js/mcp)
+  is official, at 1.4.3, and converged on the same `describe` + `query` shape. Own the CAP
+  app? Use it. Repositioned around the consumer side instead — see
+  [docs/sap-ecosystem.md](../../docs/sap-ecosystem.md). Removes `docs/mcp/`.
+
 ## [1.1.0] - 2026-08-14
+
+Tagged but never published to npm — superseded by 1.1.1.
+
 
 ### Added
 - **Capability map** — protocol-agnostic `buildCapabilityMap()` / `CAPToolkit.getCapabilityMap()`.

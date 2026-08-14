@@ -156,10 +156,25 @@ export interface CAPAgentConfig extends ToolPolicy {
    */
   toolStrategy?: ToolStrategy;
 
+  /**
+   * Overrides the HTTP path the service is served at, relative to `baseUrl`
+   * (e.g. `odata/v4/student`, or `api/students` behind an App Router).
+   *
+   * By default the path is derived from the CDS model the way CAP mounts it,
+   * so you only need this when the deployed route differs — a reverse proxy,
+   * a custom mount, or a service you do not own.
+   */
+  odataPath?: string;
+
   /** Authentication for the CAP service. Defaults to { type: 'none' }. */
   auth?: AuthConfig;
 
-  /** Path to CDS source files. Passed to `cds.load()`. @default './' */
+  /**
+   * Path passed to `cds.load()`. Defaults to `'*'` — CAP's whole-project model,
+   * resolved from the current working directory. (`'./'` is not a valid model
+   * path and throws MODEL_NOT_FOUND.)
+   * @default '*'
+   */
   cdsFile?: string;
 
   /** Pre-loaded CDS model (CSN). If provided, `cds.load()` is skipped. */
@@ -202,6 +217,11 @@ export interface LoadedCDSService {
   model: CDSModel;
   /** The service name (fully qualified). */
   serviceName: string;
+  /**
+   * The HTTP path CAP serves this service at, relative to the base URL —
+   * e.g. `odata/v4/student` for `StudentService`. Not the service name.
+   */
+  urlPath: string;
   /** Entities exposed by this service, keyed by short name. */
   entities: Record<string, CDSEntity>;
   /** Unbound actions/functions at the service level, keyed by short name. */

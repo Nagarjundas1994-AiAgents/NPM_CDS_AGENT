@@ -24,7 +24,12 @@ export {
   generateAllTools,
 } from './tool-generator';
 
-export { loadCDSModel, getEntityKeys, describeEntityFields } from './model-loader';
+export {
+  loadCDSModel,
+  getEntityKeys,
+  describeEntityFields,
+  cdsServicePath,
+} from './model-loader';
 
 export {
   buildCapabilityMap,

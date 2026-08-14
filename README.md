@@ -110,16 +110,29 @@ advertises is exactly what it permits.
 
 ---
 
-## Why MCP?
+## How this relates to SAP's official packages
 
-```text
-CAP + OData only          → traditional application integration
-CAP + cds-agents          → LLM tool integration
-CAP + MCP                 → standardized AI capability integration
-CAP + cds-agents + MCP    → AI-native CAP capability layer
-```
+SAP ships in this space, so here is the honest split (registry data, 2026-08-15):
 
-The capability map is protocol-agnostic so one CAP model can serve LangChain **and** MCP. The MCP adapter is designed; see [docs/mcp](./docs/mcp/README.md).
+| Package | What it does |
+|---|---|
+| [`@cap-js/mcp`](https://www.npmjs.com/package/@cap-js/mcp) `1.4.3` | CAP **plugin** — exposes *your* CAP app as an MCP server |
+| [`@cap-js/mcp-server`](https://www.npmjs.com/package/@cap-js/mcp-server) `0.0.5` | MCP server for AI-assisted **development** of CAP apps |
+| [`@sap-ai-sdk/langchain`](https://www.npmjs.com/package/@sap-ai-sdk/langchain) `2.14.0` | LangChain bindings for SAP GenAI Hub **models** |
+
+**We are not building an MCP server for CAP.** `@cap-js/mcp` is official, maintained, and
+converged on the same `describe` + `query` shape we use. It was on our roadmap; it's been
+dropped. If you own the CAP app, use it.
+
+The difference is producer vs consumer. `@cap-js/mcp` is a plugin — you must own the CAP
+app, add it, and redeploy. cds-agents is a client library pointed at something already
+running. That matters when the service is S/4HANA, a partner's endpoint, or another team's
+production app; when the agent author needs to constrain *their* agent without asking the
+service owner; and when one agent spans several services as a single tool array.
+
+`@sap-ai-sdk/langchain` is the model side, we're the tool side — they compose directly.
+
+Full comparison, including where this positioning isn't true yet: [docs/sap-ecosystem.md](./docs/sap-ecosystem.md).
 
 ---
 
