@@ -14,6 +14,15 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
+
+    # Publishing uses npm trusted publishing (OIDC): GitHub mints a short-lived,
+    # job-scoped credential, so there is no NPM_TOKEN to leak or expire. Requires
+    # a trusted publisher configured for this package on npmjs.com, pointing at
+    # this repository and this workflow file.
+    permissions:
+      id-token: write
+      contents: read
+
     defaults:
       run:
         working-directory: packages/cds-agents
@@ -28,6 +37,10 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
+      # Trusted publishing needs npm >= 11.5.1.
+      - name: Update npm
+        run: npm install -g npm@latest
+
       - name: Install pnpm
         run: npm install -g pnpm
 
@@ -41,7 +54,9 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Verify npm supports trusted publishing
+        run: npm --version
+
+      # No NODE_AUTH_TOKEN: credentials come from the OIDC exchange above.
       - name: Publish to npm
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
