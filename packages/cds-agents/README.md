@@ -6,7 +6,7 @@
 
   [![npm version](https://img.shields.io/npm/v/cds-agents.svg?style=for-the-badge&color=blue)](https://www.npmjs.com/package/cds-agents)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](./LICENSE)
-  [![CI](https://img.shields.io/github/actions/workflow/status/Nagarjundas1994-AiAgents/NPM_CDS_AGENT/ci.yml?style=for-the-badge&label=CI)](https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT/actions)
+  [![CI](https://img.shields.io/github/actions/workflow/status/Nagarjundas1994-AiAgents/cds-agents/ci.yml?style=for-the-badge&label=CI)](https://github.com/Nagarjundas1994-AiAgents/cds-agents/actions)
   [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 </div>
 
@@ -54,7 +54,7 @@ It reads your CDS / CSN model and exposes a governed set of tools — not a pile
 
 | Mode | Class | Use when |
 |---|---|---|
-| Tool layer | `CAPToolkit` | You want raw tools for LangGraph, a custom agent, or a future MCP adapter |
+| Tool layer | `CAPToolkit` | You want raw tools for LangGraph or a custom agent |
 | Ready-made agent | `CAPAgent` | You want a ReAct loop against one CAP service right now |
 
 `CAPToolkit` is the product. `CAPAgent` is the convenience wrapper.
@@ -116,15 +116,16 @@ Tool generation and agent execution are separate on purpose.
                      │
                      ▼
              Capability registry
-           ┌─────────┴─────────┐
-           ▼                   ▼
-     LangChain tools        MCP tools (planned)
-           │                   │
-           ▼                   ▼
-      LangGraph              OpenCode /
-      / CAPAgent             Claude / others
-           │                   │
-           └─────────┬─────────┘
+                     │
+          ┌──────────┴──────────┐
+          ▼                     ▼
+    LangChain tools      Policy enforcement
+          │                     │
+          ▼                     ▼
+      LangGraph            OData executor
+      / CAPAgent                │
+          │                     │
+          └──────────┬──────────┘
                      ▼
                 CAP runtime
                      │
@@ -133,9 +134,9 @@ Tool generation and agent execution are separate on purpose.
 ```
 
 1. **Model loader** introspects entities, actions, and functions from CDS/CSN.
-2. **Capability map** decides *what* the service may expose, given `toolStrategy` and policy.
-3. **Tool adapters** turn that map into LangChain tools (MCP adapter is next).
-4. **OData executor** performs the actual CAP calls.
+2. **Capability map** decides *what* the service may expose, given `toolStrategy`, policy, and the model's own annotations.
+3. **Tool adapters** turn that map into LangChain tools.
+4. **OData executor** performs the CAP calls, refusing anything the map does not permit.
 
 Nothing runs until the first `getTools()`, `getCapabilityMap()`, or `invoke()`.
 
@@ -489,14 +490,14 @@ Full plan: [docs/ROADMAP.md](../../docs/ROADMAP.md)
 ## Contributing
 
 ```bash
-git clone https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT.git
-cd NPM_CDS_AGENT
+git clone https://github.com/Nagarjundas1994-AiAgents/cds-agents.git
+cd cds-agents
 pnpm install
 pnpm test
 pnpm build
 ```
 
-Public identity is **`cds-agents`** (npm). This GitHub repository is still named `NPM_CDS_AGENT`; the published package and docs use `cds-agents`. See [CONTRIBUTING.md](../../CONTRIBUTING.md).
+Public identity is **`cds-agents`** (npm). This GitHub repository is still named `cds-agents`; the published package and docs use `cds-agents`. See [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 Released under the [MIT License](./LICENSE).  
 © [Nagarjun Das](https://github.com/Nagarjundas1994-AiAgents)

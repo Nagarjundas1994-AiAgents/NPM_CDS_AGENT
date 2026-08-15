@@ -6,7 +6,7 @@
 
   [![npm version](https://img.shields.io/npm/v/cds-agents.svg?style=for-the-badge&color=blue)](https://www.npmjs.com/package/cds-agents)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](./LICENSE)
-  [![CI](https://img.shields.io/github/actions/workflow/status/Nagarjundas1994-AiAgents/NPM_CDS_AGENT/ci.yml?style=for-the-badge&label=CI)](https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT/actions)
+  [![CI](https://img.shields.io/github/actions/workflow/status/Nagarjundas1994-AiAgents/cds-agents/ci.yml?style=for-the-badge&label=CI)](https://github.com/Nagarjundas1994-AiAgents/cds-agents/actions)
 </div>
 
 <br/>
@@ -24,7 +24,7 @@ const toolkit = new CAPToolkit({
 const tools = await toolkit.getTools();
 ```
 
-**npm:** [`cds-agents`](https://www.npmjs.com/package/cds-agents) &nbsp;·&nbsp; **GitHub repo name:** `NPM_CDS_AGENT` (public identity is `cds-agents`)
+**npm:** [`cds-agents`](https://www.npmjs.com/package/cds-agents)
 
 ---
 
@@ -32,7 +32,7 @@ const tools = await toolkit.getTools();
 
 A TypeScript monorepo for **cds-agents** — the capability layer between SAP CAP and AI agents.
 
-It reads your CDS / CSN model and exposes a governed set of tools. The same capability map feeds LangChain today and MCP next.
+It reads your CDS / CSN model and exposes a governed set of tools, with the policy enforced in the executor rather than only at tool generation.
 
 ```text
                  cds-agents
@@ -57,7 +57,7 @@ It reads your CDS / CSN model and exposes a governed set of tools. The same capa
 | `CAPAgent` | Ready-made ReAct agent for demos and small apps. |
 | `ODataExecutor` | OData V4 client with structured errors, timeout, dry-run. |
 
-This is **not** a multi-agent orchestrator. Compose `CAPToolkit` tools into LangGraph (or, soon, MCP) when you need supervisors, branching, or human-in-the-loop.
+This is **not** a multi-agent orchestrator. Compose `CAPToolkit` tools into LangGraph when you need supervisors, branching, or human-in-the-loop.
 
 ---
 
@@ -141,8 +141,8 @@ Full comparison, including where this positioning isn't true yet: [docs/sap-ecos
 ```text
 packages/cds-agents/     Published npm package
 demo-app/                University CAP service + CLI chat
-docs/                    Roadmap and MCP protocol notes
-.github/workflows/       CI + npm publish
+docs/                    Roadmap and SAP ecosystem positioning
+.github/workflows/       CI + npm publish (OIDC trusted publishing)
 ```
 
 The root package is private (`cds-agents-monorepo`). The public product is **`cds-agents`**.
@@ -195,11 +195,11 @@ CI runs lint, unit tests, build, and `npm pack` on Node 20 / 22 / 24.
 
 ## Roadmap
 
-1. Product identity, capability map, tool strategies, CI
+1. Capability map, tool strategies, enforced governance, CI
 2. Query planning, dry-run explain, `@restrict` / `@requires`
-3. `@cds-agents/mcp` + Inspector + OpenCode demo
+3. Build the model from a live `$metadata` endpoint — services you don't own, no CDS sources
 4. OAuth / XSUAA / IAS, tenant context, tracing, approvals
-5. CLI: `inspect`, `mcp`, `doctor`
+5. CLI: `inspect`, `doctor`
 
 Details: [docs/ROADMAP.md](./docs/ROADMAP.md)
 

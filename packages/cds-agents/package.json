@@ -4,9 +4,9 @@
   "description": "Turn SAP CAP services into governed AI capabilities for LangChain, LangGraph, MCP, and enterprise agents",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "homepage": "https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT#readme",
+  "homepage": "https://github.com/Nagarjundas1994-AiAgents/cds-agents#readme",
   "bugs": {
-    "url": "https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT/issues"
+    "url": "https://github.com/Nagarjundas1994-AiAgents/cds-agents/issues"
   },
   "files": [
     "dist",
@@ -43,7 +43,7 @@
   "author": "Nagarjun Das",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT.git",
+    "url": "git+https://github.com/Nagarjundas1994-AiAgents/cds-agents.git",
     "directory": "packages/cds-agents"
   },
   "engines": {

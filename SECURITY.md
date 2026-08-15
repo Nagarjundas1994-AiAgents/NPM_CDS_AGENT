@@ -10,7 +10,7 @@
 
 Do **not** open a public GitHub issue for security problems.
 
-Email the maintainer via the address on [npm: cds-agents](https://www.npmjs.com/package/cds-agents) or open a [private GitHub security advisory](https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT/security/advisories/new).
+Email the maintainer via the address on [npm: cds-agents](https://www.npmjs.com/package/cds-agents) or open a [private GitHub security advisory](https://github.com/Nagarjundas1994-AiAgents/cds-agents/security/advisories/new).
 
 Please include:
 

@@ -3,13 +3,13 @@
   "version": "1.1.2",
   "private": true,
   "description": "Monorepo for cds-agents — the SAP CAP-native tool layer for agentic applications",
-  "homepage": "https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT#readme",
+  "homepage": "https://github.com/Nagarjundas1994-AiAgents/cds-agents#readme",
   "bugs": {
-    "url": "https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT/issues"
+    "url": "https://github.com/Nagarjundas1994-AiAgents/cds-agents/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT.git"
+    "url": "git+https://github.com/Nagarjundas1994-AiAgents/cds-agents.git"
   },
   "scripts": {
     "test": "pnpm -r test",

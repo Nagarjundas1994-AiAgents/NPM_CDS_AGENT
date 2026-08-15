@@ -7,7 +7,7 @@ Thanks for helping turn SAP CAP services into governed AI capabilities.
 | Surface | Name |
 |---|---|
 | npm | `cds-agents` |
-| GitHub repository (current) | `NPM_CDS_AGENT` |
+| GitHub repository (current) | `cds-agents` |
 | Published package path | `packages/cds-agents` |
 | Root workspace | private `cds-agents-monorepo` |
 
@@ -16,8 +16,8 @@ Please use **cds-agents** in docs, issues, and commit messages. The GitHub repo 
 ## Development setup
 
 ```bash
-git clone https://github.com/Nagarjundas1994-AiAgents/NPM_CDS_AGENT.git
-cd NPM_CDS_AGENT
+git clone https://github.com/Nagarjundas1994-AiAgents/cds-agents.git
+cd cds-agents
 pnpm install
 pnpm --filter cds-agents test
 pnpm --filter cds-agents lint
